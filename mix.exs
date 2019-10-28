@@ -65,7 +65,7 @@ defmodule Myhtmlex.Mixfile do
       # benchmarking helpers
       {:benchfella, "~> 0.3.0", only: :dev},
       # cnode helpers
-      {:nodex, "~> 0.1.1"}
+      {:nodex, git: "https://github.com/rinpatch/nodex", ref: "12ca7a2c5b5791f1e847d73ed646cf006d4c8ca8"}
     ]
   end
 
