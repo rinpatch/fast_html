@@ -18,18 +18,12 @@
 #include <myhtml/myhtml.h>
 #include <myhtml/mynamespace.h>
 
-#define BUFFER_SIZE 1000
+#define BUFFER_SIZE 4096
 
 typedef struct _state_t {
   int fd;
   myhtml_t* myhtml;
 } state_t;
-
-typedef struct _prefab_t {
-  ETERM* atom_nil;
-  ETERM* atom_comment;
-  ETERM* empty_list;
-} prefab_t;
 
 void
 handle_emsg(state_t* state, ErlMessage* emsg);
@@ -38,14 +32,14 @@ handle_send(state_t* state, ErlMessage* emsg);
 ETERM*
 decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args);
 ETERM*
-build_tree(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node, unsigned char* parse_flags);
+build_tree(myhtml_tree_t* tree, myhtml_tree_node_t* node, unsigned char* parse_flags);
 ETERM*
-build_node_attrs(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node);
+build_node_attrs(myhtml_tree_t* tree, myhtml_tree_node_t* node);
 ETERM*
 err_term(const char* error_atom);
 unsigned char
 read_parse_flags(ETERM* list);
-char*
+static inline char *
 lowercase(char* c);
 
 const unsigned char FLAG_HTML_ATOMS       = 1 << 0;
@@ -67,9 +61,10 @@ int main(int argc, char **argv) {
   char *cookie = argv[3];
   char *tname = argv[4];
   char full_name[1024];
-  stpncpy(stpncpy(stpncpy(full_name, sname, sizeof(full_name)), "@", sizeof(full_name)), hostname, sizeof(full_name));
   char target_node[1024];
-  stpncpy(stpncpy(stpncpy(target_node, tname, sizeof(target_node)), "@", sizeof(target_node)), hostname, sizeof(target_node));
+
+  snprintf(full_name, sizeof full_name, "%s@%s", sname, hostname);
+  snprintf(target_node, sizeof target_node, "%s@%s", tname, hostname);
 
   struct in_addr addr;
   addr.s_addr = htonl(INADDR_ANY);
@@ -207,13 +202,6 @@ ETERM*
 decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args)
 {
   unsigned char parse_flags = 0;
-  prefab_t prefab;
-
-  // prepare reusable prefab terms
-  prefab.atom_nil = erl_mk_atom("nil");
-  prefab.atom_comment = erl_mk_atom("comment");
-  prefab.empty_list = erl_mk_empty_list();
-
 
   if (!ERL_IS_BINARY(bin) || !ERL_IS_LIST(args))
   {
@@ -239,11 +227,8 @@ decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args)
 
   // build tree
   myhtml_tree_node_t *root = myhtml_tree_get_document(tree);
-  ETERM* result = build_tree(&prefab, tree, myhtml_node_last_child(root), &parse_flags);
+  ETERM* result = build_tree(tree, myhtml_node_last_child(root), &parse_flags);
   myhtml_tree_destroy(tree);
-
-  erl_free_term(prefab.atom_nil);
-  erl_free_term(prefab.atom_comment);
 
   return result;
 }
@@ -279,9 +264,12 @@ read_parse_flags(ETERM* list)
 
   return parse_flags;
 }
-ETERM* build_tree(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node, unsigned char* parse_flags)
+
+ETERM* build_tree(myhtml_tree_t* tree, myhtml_tree_node_t* node, unsigned char* parse_flags)
 {
   ETERM* result;
+  ETERM* atom_nil = erl_mk_atom("nil");
+  ETERM* empty_list = erl_mk_empty_list();
   myhtml_tree_node_t* prev_node = NULL;
 
   tstack stack;
@@ -297,15 +285,15 @@ ETERM* build_tree(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* nod
       tstack_push(&stack, erl_mk_empty_list());
 
       prev_node = current_node;
-      current_node=current_node->last_child;
+      current_node = current_node->last_child;
 
       continue;
     } else {
       if ((myhtml_node_is_close_self(current_node)  || myhtml_node_is_void_element(current_node))
       && (*parse_flags & FLAG_NIL_SELF_CLOSING)) {
-        children = prefab->atom_nil;
+        children = atom_nil;
       } else {
-        children = prefab->empty_list;
+        children = empty_list;
       }
     }
 
@@ -370,8 +358,7 @@ ETERM* build_tree(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* nod
       }
 
       // attributes
-      attrs = build_node_attrs(prefab, tree, current_node);
-
+      attrs = build_node_attrs(tree, current_node);
 
       if (!(*parse_flags & FLAG_HTML_ATOMS) || (tag_id == MyHTML_TAG__UNDEF || tag_id == MyHTML_TAG_LAST_ENTRY || tag_ns != MyHTML_NAMESPACE_HTML))
         tag = erl_mk_binary(tag_string, tag_string_len);
@@ -380,26 +367,26 @@ ETERM* build_tree(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* nod
 
       result = erl_format("{~w, ~w, ~w}", tag, attrs, children);
     }
+
     if (stack.used == 0) {
       tstack_free(&stack);
-      return result;
+      break;
     } else {
       tstack_push(&stack, erl_cons(result, tstack_pop(&stack)));
       prev_node = current_node;
-      current_node=current_node->prev ? current_node->prev : current_node->parent;
+      current_node = current_node->prev ? current_node->prev : current_node->parent;
     }
   }
+
+  erl_free_term(atom_nil);
+
+  return result;
 }
 
 ETERM*
-build_node_attrs(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node)
+build_node_attrs(myhtml_tree_t* tree, myhtml_tree_node_t* node)
 {
   myhtml_tree_attr_t* attr;
-
-  /* if (attr == NULL) */
-  /* { */
-  /*   return prefab->empty_list; */
-  /* } */
 
   ETERM* list = erl_mk_empty_list();
 
@@ -431,7 +418,7 @@ build_node_attrs(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node
   return list;
 }
 
-char*
+static inline char*
 lowercase(char* c)
 {
   char* p = c;
