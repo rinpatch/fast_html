@@ -128,6 +128,14 @@ int main(int argc, char **argv) {
     }
   }
 
+  // shutdown: free all erlang terms still around
+  erl_eterm_release();
+  free(bufferpp);
+
+  myhtml_destroy(state->myhtml);
+  free(state);
+
+  return EXIT_SUCCESS;
 }
 
 void
@@ -233,6 +241,10 @@ decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args)
   myhtml_tree_node_t *root = myhtml_tree_get_document(tree);
   ETERM* result = build_tree(&prefab, tree, myhtml_node_last_child(root), &parse_flags);
   myhtml_tree_destroy(tree);
+
+  erl_free_term(prefab.atom_nil);
+  erl_free_term(prefab.atom_comment);
+
   return result;
 }
 
@@ -241,22 +253,29 @@ read_parse_flags(ETERM* list)
 {
   unsigned char parse_flags = 0;
   ETERM *flag;
+  ETERM *html_atoms = erl_mk_atom("html_atoms");
+  ETERM *nil_self_closing = erl_mk_atom("nil_self_closing");
+  ETERM *comment_tuple3 = erl_mk_atom("comment_tuple3");
 
   for (; !ERL_IS_EMPTY_LIST(list); list = ERL_CONS_TAIL(list)) {
     flag = ERL_CONS_HEAD(list);
-    if (erl_match(erl_format("html_atoms"), flag))
+    if (erl_match(html_atoms, flag))
     {
       parse_flags |= FLAG_HTML_ATOMS;
     }
-    else if (erl_match(erl_format("nil_self_closing"), flag))
+    else if (erl_match(nil_self_closing, flag))
     {
       parse_flags |= FLAG_NIL_SELF_CLOSING;
     }
-    else if (erl_match(erl_format("comment_tuple3"), flag))
+    else if (erl_match(comment_tuple3, flag))
     {
       parse_flags |= FLAG_COMMENT_TUPLE3;
     }
   }
+
+  erl_free_term(html_atoms);
+  erl_free_term(nil_self_closing);
+  erl_free_term(comment_tuple3);
 
   return parse_flags;
 }
@@ -375,7 +394,7 @@ ETERM* build_tree(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* nod
 ETERM*
 build_node_attrs(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node)
 {
-  myhtml_tree_attr_t* attr = myhtml_node_attribute_last(node);
+  myhtml_tree_attr_t* attr;
 
   /* if (attr == NULL) */
   /* { */
@@ -384,7 +403,7 @@ build_node_attrs(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node
 
   ETERM* list = erl_mk_empty_list();
 
-  while (attr)
+  for (attr = myhtml_node_attribute_last(node); attr != NULL; attr = myhtml_attribute_prev(attr))
   {
     ETERM* name;
     ETERM* value;
@@ -395,21 +414,18 @@ build_node_attrs(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node
     size_t attr_value_len;
     const char *attr_value = myhtml_attribute_value(attr, &attr_value_len);
 
-    if (attr_value) {
-      value = erl_mk_binary(attr_value, attr_value_len);
-    } else {
-      value = erl_mk_binary(attr_name, attr_name_len);
-    }
+    /* guard against poisoned attribute nodes */
+    if (! attr_name_len)
+      continue;
+
     name = erl_mk_binary(attr_name, attr_name_len);
+    value = attr_value_len ? erl_mk_binary(attr_value, attr_value_len) : name;
 
     /* ETERM* tuple2[] = {name, value}; */
     /* attr_tuple = erl_mk_tuple(tuple2, 2); */
     attr_tuple = erl_format("{~w, ~w}", name, value);
 
     list = erl_cons(attr_tuple, list);
-
-    // get prev attribute, building the list from reverse
-    attr = myhtml_attribute_prev(attr);
   }
 
   return list;
