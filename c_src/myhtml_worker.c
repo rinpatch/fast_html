@@ -22,7 +22,7 @@
 
 typedef struct _state_t {
   int fd;
-  myhtml_tree_t*  tree;
+  myhtml_t* myhtml;
 } state_t;
 
 typedef struct _prefab_t {
@@ -94,10 +94,8 @@ int main(int argc, char **argv) {
   if ((state->fd = erl_connect(target_node)) < 0)
     erl_err_quit("erl_connect");
 
-  myhtml_t* myhtml = myhtml_create();
-  myhtml_init(myhtml, MyHTML_OPTIONS_DEFAULT, 1, 0);
-  state->tree = myhtml_tree_create();
-  myhtml_tree_init(state->tree, myhtml);
+  state->myhtml = myhtml_create();
+  myhtml_init(state->myhtml, MyHTML_OPTIONS_DEFAULT, 1, 0);
 
   // signal to stdout that we are ready
   printf("%s ready\n", full_name); fflush(stdout);
@@ -218,8 +216,11 @@ decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args)
   char* binary = (char*)ERL_BIN_PTR(bin);
   size_t binary_len = ERL_BIN_SIZE(bin);
 
+  myhtml_tree_t* tree = myhtml_tree_create();
+  myhtml_tree_init(tree, state->myhtml);
+
   // parse tree
-  mystatus_t status = myhtml_parse(state->tree, MyENCODING_UTF_8, binary, binary_len);
+  mystatus_t status = myhtml_parse(tree, MyENCODING_UTF_8, binary, binary_len);
   if (status != MyHTML_STATUS_OK)
   {
     return err_term("myhtml_parse_failed");
@@ -229,8 +230,10 @@ decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args)
   parse_flags = read_parse_flags(args);
 
   // build tree
-  myhtml_tree_node_t *root = myhtml_tree_get_document(state->tree);
-  return build_tree(&prefab, state->tree, myhtml_node_last_child(root), &parse_flags);
+  myhtml_tree_node_t *root = myhtml_tree_get_document(tree);
+  ETERM* result = build_tree(&prefab, tree, myhtml_node_last_child(root), &parse_flags);
+  myhtml_tree_destroy(tree);
+  return result;
 }
 
 unsigned char
