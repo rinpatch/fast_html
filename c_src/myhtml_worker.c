@@ -39,7 +39,7 @@ ETERM*
 err_term(const char* error_atom);
 unsigned char
 read_parse_flags(ETERM* list);
-char*
+static inline char *
 lowercase(char* c);
 
 const unsigned char FLAG_HTML_ATOMS       = 1 << 0;
@@ -418,7 +418,7 @@ build_node_attrs(myhtml_tree_t* tree, myhtml_tree_node_t* node)
   return list;
 }
 
-char*
+static inline char*
 lowercase(char* c)
 {
   char* p = c;
