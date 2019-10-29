@@ -18,7 +18,7 @@
 #include <myhtml/myhtml.h>
 #include <myhtml/mynamespace.h>
 
-#define BUFFER_SIZE 1000
+#define BUFFER_SIZE 4096
 
 typedef struct _state_t {
   int fd;
