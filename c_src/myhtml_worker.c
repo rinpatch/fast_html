@@ -40,7 +40,7 @@ decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args);
 ETERM*
 build_tree(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node, unsigned char* parse_flags);
 ETERM*
-build_node_attrs(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node);
+build_node_attrs(myhtml_tree_t* tree, myhtml_tree_node_t* node);
 ETERM*
 err_term(const char* error_atom);
 unsigned char
@@ -370,7 +370,7 @@ ETERM* build_tree(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* nod
       }
 
       // attributes
-      attrs = build_node_attrs(prefab, tree, current_node);
+      attrs = build_node_attrs(tree, current_node);
 
 
       if (!(*parse_flags & FLAG_HTML_ATOMS) || (tag_id == MyHTML_TAG__UNDEF || tag_id == MyHTML_TAG_LAST_ENTRY || tag_ns != MyHTML_NAMESPACE_HTML))
@@ -392,14 +392,9 @@ ETERM* build_tree(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* nod
 }
 
 ETERM*
-build_node_attrs(prefab_t* prefab, myhtml_tree_t* tree, myhtml_tree_node_t* node)
+build_node_attrs(myhtml_tree_t* tree, myhtml_tree_node_t* node)
 {
   myhtml_tree_attr_t* attr;
-
-  /* if (attr == NULL) */
-  /* { */
-  /*   return prefab->empty_list; */
-  /* } */
 
   ETERM* list = erl_mk_empty_list();
 
