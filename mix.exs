@@ -66,7 +66,8 @@ defmodule Myhtmlex.Mixfile do
       {:benchfella, "~> 0.3.0", only: :dev},
       # cnode helpers
       {:nodex,
-       git: "https://github.com/rinpatch/nodex", ref: "12ca7a2c5b5791f1e847d73ed646cf006d4c8ca8"}
+       git: "https://git.pleroma.social/pleroma/nodex",
+       ref: "2927091d96900fb76f6bc897e46a6abb9070ebbd"}
     ]
   end
 
