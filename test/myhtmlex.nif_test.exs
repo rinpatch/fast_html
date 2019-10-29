@@ -16,11 +16,14 @@ defmodule Myhtmlex.NifTest do
   test "open and decode_tree" do
     ref = Myhtmlex.open(~s'text node')
     assert is_reference(ref)
-    assert {:html, [], [
-      {:head, [], []},
-      {:body, [], [
-        "text node"
-      ]}
-    ]} = Myhtmlex.decode_tree(ref, format: [:html_atoms])
+
+    assert {:html, [],
+            [
+              {:head, [], []},
+              {:body, [],
+               [
+                 "text node"
+               ]}
+            ]} = Myhtmlex.decode_tree(ref, format: [:html_atoms])
   end
 end

@@ -76,15 +76,16 @@ defmodule Myhtmlex do
   3. Bonus: You can [open up in-memory references to parsed trees](https://hexdocs.pm/myhtmlex/Myhtmlex.html#open/1), without parsing + mapping erlang terms in one go
   """
 
-  @type tag() :: String.t | atom()
-  @type attr() :: {String.t, String.t}
+  @type tag() :: String.t() | atom()
+  @type attr() :: {String.t(), String.t()}
   @type attr_list() :: [] | [attr()]
-  @type comment_node() :: {:comment, String.t}
-  @type comment_node3() :: {:comment, [], String.t}
-  @type tree() :: {tag(), attr_list(), tree()}
-    | {tag(), attr_list(), nil}
-    | comment_node()
-    | comment_node3()
+  @type comment_node() :: {:comment, String.t()}
+  @type comment_node3() :: {:comment, [], String.t()}
+  @type tree() ::
+          {tag(), attr_list(), tree()}
+          | {tag(), attr_list(), nil}
+          | comment_node()
+          | comment_node3()
   @type format_flag() :: :html_atoms | :nil_self_closing | :comment_tuple3
 
   defp module() do
@@ -110,7 +111,7 @@ defmodule Myhtmlex do
       iex> Myhtmlex.decode("<br>")
       {"html", [], [{"head", [], []}, {"body", [], [{"br", [], []}]}]}
   """
-  @spec decode(String.t) :: tree()
+  @spec decode(String.t()) :: tree()
   def decode(bin) do
     decode(bin, format: [])
   end
@@ -144,7 +145,7 @@ defmodule Myhtmlex do
         {:body, [], [{:comment, [], " a comment "}, {"unknown", [], nil}]}]}
 
   """
-  @spec decode(String.t, format: [format_flag()]) :: tree()
+  @spec decode(String.t(), format: [format_flag()]) :: tree()
   def decode(bin, format: flags) do
     module().decode(bin, flags)
   end
@@ -152,7 +153,7 @@ defmodule Myhtmlex do
   @doc """
   Returns a reference to an internally parsed myhtml_tree_t. (Nif only!)
   """
-  @spec open(String.t) :: reference()
+  @spec open(String.t()) :: reference()
   def open(bin) do
     Myhtmlex.Nif.open(bin)
   end
@@ -173,4 +174,3 @@ defmodule Myhtmlex do
     Myhtmlex.Nif.decode_tree(ref, flags)
   end
 end
-

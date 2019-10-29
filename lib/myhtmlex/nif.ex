@@ -1,8 +1,8 @@
 defmodule Myhtmlex.Nif do
   @moduledoc false
-  @on_load { :init, 0 }
+  @on_load {:init, 0}
 
-  app = Mix.Project.config[:app]
+  app = Mix.Project.config()[:app]
 
   def init do
     path = :filename.join(:code.priv_dir(unquote(app)), 'myhtmlex')
@@ -24,4 +24,3 @@ defmodule Myhtmlex.Nif do
   def decode_tree(tree, flags)
   def decode_tree(_, _), do: exit(:nif_library_not_loaded)
 end
-

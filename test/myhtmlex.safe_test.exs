@@ -5,4 +5,3 @@ defmodule Myhtmlex.SafeTest do
     assert {"html", _attrs, _children} = Myhtmlex.decode("<div> <!----> </div>")
   end
 end
-

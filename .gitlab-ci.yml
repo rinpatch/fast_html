@@ -2,6 +2,7 @@ image: elixir:1.7
 
 variables:
   MIX_ENV: test
+  GIT_SUBMODULE_STRATEGY: recursive
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}

@@ -8,9 +8,9 @@ defmodule Myhtmlex.Mixfile do
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
-      compilers: [:myhtmlex_make] ++ Mix.compilers,
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      compilers: [:myhtmlex_make] ++ Mix.compilers(),
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       name: "Myhtmlex",
       description: """
         A module to decode HTML into a tree,
@@ -65,7 +65,8 @@ defmodule Myhtmlex.Mixfile do
       # benchmarking helpers
       {:benchfella, "~> 0.3.0", only: :dev},
       # cnode helpers
-      {:nodex, git: "https://github.com/rinpatch/nodex", ref: "12ca7a2c5b5791f1e847d73ed646cf006d4c8ca8"}
+      {:nodex,
+       git: "https://github.com/rinpatch/nodex", ref: "12ca7a2c5b5791f1e847d73ed646cf006d4c8ca8"}
     ]
   end
 
@@ -83,24 +84,27 @@ defmodule Mix.Tasks.Compile.MyhtmlexMake do
   ]
 
   def run(_) do
-    if match? {:win32, _}, :os.type do
-      IO.warn "Windows is not yet a target."
+    if match?({:win32, _}, :os.type()) do
+      IO.warn("Windows is not yet a target.")
       exit(1)
     else
-      {result, _error_code} = System.cmd("make",
-        @artifacts,
-        stderr_to_stdout: true,
-        env: [{"MIX_ENV", to_string(Mix.env)}]
-      )
-      IO.binwrite result
+      {result, _error_code} =
+        System.cmd(
+          "make",
+          @artifacts,
+          stderr_to_stdout: true,
+          env: [{"MIX_ENV", to_string(Mix.env())}]
+        )
+
+      IO.binwrite(result)
     end
+
     :ok
   end
 
   def clean() do
     {result, _error_code} = System.cmd("make", ["clean"], stderr_to_stdout: true)
-    Mix.shell.info result
+    Mix.shell().info(result)
     :ok
   end
 end
-
