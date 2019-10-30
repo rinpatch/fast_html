@@ -27,8 +27,8 @@ defmodule Myhtmlex.Mixfile do
       maintainers: ["Lukas Rieder"],
       licenses: ["GNU LGPL"],
       links: %{
-        "Github" => "https://github.com/Overbryd/myhtmlex",
-        "Issues" => "https://github.com/Overbryd/myhtmlex/issues",
+        "Github" => "https://git.pleroma.social/pleroma/myhtmlex",
+        "Issues" => "https://git.pleroma.social/pleroma/myhtmlex/issues",
         "MyHTML" => "https://github.com/lexborisov/myhtml"
       },
       files: [
@@ -37,8 +37,6 @@ defmodule Myhtmlex.Mixfile do
         "priv/.gitignore",
         "test",
         "Makefile",
-        "Makefile.Darwin",
-        "Makefile.Linux",
         "mix.exs",
         "README.md",
         "LICENSE"
@@ -67,7 +65,7 @@ defmodule Myhtmlex.Mixfile do
       # cnode helpers
       {:nodex,
        git: "https://git.pleroma.social/pleroma/nodex",
-       ref: "2927091d96900fb76f6bc897e46a6abb9070ebbd"}
+       ref: "cb6730f943cfc6aad674c92161be23a8411f15d1"}
     ]
   end
 
@@ -84,14 +82,28 @@ defmodule Mix.Tasks.Compile.MyhtmlexMake do
     "priv/myhtml_worker"
   ]
 
+  def find_make do
+    _make_cmd =
+      System.get_env("MAKE") ||
+        case :os.type() do
+          {:unix, :freebsd} -> "gmake"
+          {:unix, :openbsd} -> "gmake"
+          {:unix, :netbsd} -> "gmake"
+          {:unix, :dragonfly} -> "gmake"
+          _ -> "make"
+        end
+  end
+
   def run(_) do
+    make_cmd = find_make()
+
     if match?({:win32, _}, :os.type()) do
       IO.warn("Windows is not yet a target.")
       exit(1)
     else
       {result, _error_code} =
         System.cmd(
-          "make",
+          make_cmd,
           @artifacts,
           stderr_to_stdout: true,
           env: [{"MIX_ENV", to_string(Mix.env())}]
@@ -104,7 +116,8 @@ defmodule Mix.Tasks.Compile.MyhtmlexMake do
   end
 
   def clean() do
-    {result, _error_code} = System.cmd("make", ["clean"], stderr_to_stdout: true)
+    make_cmd = find_make()
+    {result, _error_code} = System.cmd(make_cmd, ["clean"], stderr_to_stdout: true)
     Mix.shell().info(result)
     :ok
   end
