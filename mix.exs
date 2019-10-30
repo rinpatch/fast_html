@@ -27,8 +27,8 @@ defmodule Myhtmlex.Mixfile do
       maintainers: ["Lukas Rieder"],
       licenses: ["GNU LGPL"],
       links: %{
-        "Github" => "https://github.com/Overbryd/myhtmlex",
-        "Issues" => "https://github.com/Overbryd/myhtmlex/issues",
+        "Github" => "https://git.pleroma.social./pleroma/myhtmlex",
+        "Issues" => "https://gitpleroma.social/pleroma/myhtmlex/issues",
         "MyHTML" => "https://github.com/lexborisov/myhtml"
       },
       files: [
@@ -65,7 +65,7 @@ defmodule Myhtmlex.Mixfile do
       # cnode helpers
       {:nodex,
        git: "https://git.pleroma.social/pleroma/nodex",
-       ref: "2927091d96900fb76f6bc897e46a6abb9070ebbd"}
+       ref: "cb6730f943cfc6aad674c92161be23a8411f15d1"}
     ]
   end
 
