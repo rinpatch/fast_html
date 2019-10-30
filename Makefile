@@ -40,14 +40,19 @@ CNODE_CFLAGS += -L$(ERL_INTERFACE)/lib
 CNODE_CFLAGS += -I$(ERL_INTERFACE)/include
 CNODE_CFLAGS += -lerl_interface -lei
 
-# platform specific
-UNAME = $(shell uname -s)
-ifeq ($(wilcard Makefile.$(UNAME)),)
-	include Makefile.$(UNAME)
-endif
-
 # enumerate docker build tests
 BUILD_TESTS := $(patsubst %.dockerfile, %.dockerfile.PHONY, $(wildcard ./build-test/*.dockerfile))
+
+# platform specific environment
+UNAME = $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    MYHTMLEX_LDFLAGS += -dynamiclib -undefined dynamic_lookup
+else
+    # myhtmlex is using stpcpy, as defined in gnu string.h
+    MYHTMLEX_CFLAGS += -D_GNU_SOURCE
+    # base on the same posix c source as myhtml
+    # MYHTMLEX_CFLAGS += -D_POSIX_C_SOURCE=199309
+endif
 
 .PHONY: all
 

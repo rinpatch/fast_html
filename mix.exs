@@ -37,8 +37,6 @@ defmodule Myhtmlex.Mixfile do
         "priv/.gitignore",
         "test",
         "Makefile",
-        "Makefile.Darwin",
-        "Makefile.Linux",
         "mix.exs",
         "README.md",
         "LICENSE"
@@ -84,14 +82,28 @@ defmodule Mix.Tasks.Compile.MyhtmlexMake do
     "priv/myhtml_worker"
   ]
 
+  def find_make do
+    _make_cmd =
+      System.get_env("MAKE") ||
+        case :os.type() do
+          {:unix, :freebsd} -> "gmake"
+          {:unix, :openbsd} -> "gmake"
+          {:unix, :netbsd} -> "gmake"
+          {:unix, :dragonfly} -> "gmake"
+          _ -> "make"
+        end
+  end
+
   def run(_) do
+    make_cmd = find_make()
+
     if match?({:win32, _}, :os.type()) do
       IO.warn("Windows is not yet a target.")
       exit(1)
     else
       {result, _error_code} =
         System.cmd(
-          "make",
+          make_cmd,
           @artifacts,
           stderr_to_stdout: true,
           env: [{"MIX_ENV", to_string(Mix.env())}]
@@ -104,7 +116,8 @@ defmodule Mix.Tasks.Compile.MyhtmlexMake do
   end
 
   def clean() do
-    {result, _error_code} = System.cmd("make", ["clean"], stderr_to_stdout: true)
+    make_cmd = find_make()
+    {result, _error_code} = System.cmd(make_cmd, ["clean"], stderr_to_stdout: true)
     Mix.shell().info(result)
     :ok
   end

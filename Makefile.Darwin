@@ -1,1 +1,0 @@
-MYHTMLEX_LDFLAGS += -dynamiclib -undefined dynamic_lookup
