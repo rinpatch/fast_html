@@ -27,8 +27,8 @@ defmodule Myhtmlex.Mixfile do
       maintainers: ["Lukas Rieder"],
       licenses: ["GNU LGPL"],
       links: %{
-        "Github" => "https://git.pleroma.social./pleroma/myhtmlex",
-        "Issues" => "https://gitpleroma.social/pleroma/myhtmlex/issues",
+        "Github" => "https://git.pleroma.social/pleroma/myhtmlex",
+        "Issues" => "https://git.pleroma.social/pleroma/myhtmlex/issues",
         "MyHTML" => "https://github.com/lexborisov/myhtml"
       },
       files: [
