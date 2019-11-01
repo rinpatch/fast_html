@@ -62,7 +62,7 @@ myhtmlex: priv/myhtmlex.so
 	$(MIX) compile
 
 $(MYHTML_STATIC): $(MYHTML_PATH)
-	$(MAKE) -C $(MYHTML_PATH) library
+	$(MAKE) -C $(MYHTML_PATH) library MyCORE_BUILD_WITHOUT_THREADS=YES
 
 priv/myhtmlex.so: c_src/myhtmlex.c $(MYHTML_STATIC)
 	$(CC) $(MYHTMLEX_CFLAGS) $(MYHTMLEX_LDFLAGS) -o $@ $< $(MYHTML_STATIC)
