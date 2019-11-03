@@ -78,7 +78,6 @@ end
 
 defmodule Mix.Tasks.Compile.MyhtmlexMake do
   @artifacts [
-    "priv/myhtmlex.so",
     "priv/myhtml_worker"
   ]
 
