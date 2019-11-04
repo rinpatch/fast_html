@@ -487,6 +487,8 @@ static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_
     if (current_node == node)
       break;
   }
+
+  tstack_free (&stack);
 }
 
 static inline char * lowercase(char* c)
