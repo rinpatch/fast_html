@@ -18,6 +18,18 @@
 
 #include "tstack.h"
 
+#ifdef __GNUC__
+# define AFP(x, y) __attribute__((format (printf, x, y)))
+#else
+# define AFP(x, y)
+#endif
+
+#ifdef __GNUC__
+# define NORETURN __attribute__((noreturn))
+#else
+# define NORETURN
+#endif
+
 typedef struct _state_t {
   int fd;
   myhtml_t * myhtml;
@@ -43,20 +55,7 @@ static void prepare_node_attrs(ei_x_buff * response, myhtml_tree_node_t * node);
 
 static inline char * lowercase(char * c);
 
-#ifdef __GNUC__
-# define AFP(x, y) __attribute__((format (printf, x, y)))
-#else
-# define AFP(x, y)
-#endif
-
-#ifdef __GNUC__
-# define NORETURN __attribute__((noreturn))
-#else
-# define NORETURN
-#endif
-
 static void panic(const char *fmt, ...) AFP(1, 2);
-
 static void panic(const char *fmt, ...) {
   char buf[4096];
   va_list va;
@@ -150,7 +149,6 @@ int main(int argc, const char *argv[]) {
 // handle an erlang_msg structure and call handle_send() if relevant
 static void handle_emsg (state_t * state, erlang_msg * emsg)
 {
-  // XXX: don't know why this is necessary?
   state->buffer.index = 0;
 
   switch (emsg->msgtype)
@@ -286,8 +284,6 @@ static void decode (state_t * state, ei_x_buff * response, const char * bin_data
     err_term (response, "myhtml_parse_failed");
     return;
   }
-
-//  err_term (response, "tree_building_unimplemented");
 
   // build tree
   myhtml_tree_node_t * root = myhtml_tree_get_document (tree);
@@ -430,13 +426,18 @@ static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_
 	// +1 because myhtml uses strlen for length returned, which doesn't include the null-byte
 	// https://github.com/lexborisov/myhtml/blob/0ade0e564a87f46fd21693a7d8c8d1fa09ffb6b6/source/myhtml/mynamespace.c#L80
         char tag_ns_buffer[tag_ns_len + 1];
-        strncpy (tag_ns_buffer, tag_ns_name_ptr, sizeof(tag_ns_buffer));
+        strncpy (tag_ns_buffer, tag_ns_name_ptr, sizeof tag_ns_buffer);
         lowercase (tag_ns_buffer);
 
-	snprintf (tag_string, sizeof(buffer), "%s:%s", tag_ns_buffer, tag_name);
+	snprintf (tag_string, sizeof buffer, "%s:%s", tag_ns_buffer, tag_name);
       }
       else
-        strncpy (tag_string, tag_name, sizeof(buffer));
+      {
+        // strncpy length does not contain null, so blank the buffer before copying
+        // and limit the copy length to buffer size minus one for safety.
+        memset (tag_string, '\0', sizeof buffer);
+        strncpy (tag_string, tag_name, sizeof buffer - 1);
+      }
 
       if (response->index > 1)
       {
