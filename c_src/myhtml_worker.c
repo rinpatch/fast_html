@@ -53,6 +53,12 @@ const unsigned char FLAG_COMMENT_TUPLE3   = 1 << 2;
 # define AFP(x, y)
 #endif
 
+#ifdef __GNUC__
+# define NORETURN __attribute__((noreturn))
+#else
+# define NORETURN
+#endif
+
 static void panic(const char *fmt, ...) AFP(1, 2);
 
 static void panic(const char *fmt, ...) {
@@ -67,20 +73,25 @@ static void panic(const char *fmt, ...) {
   exit (EXIT_FAILURE);
 }
 
-int main(int argc, char **argv) {
-  if (argc != 5 || !strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
-    printf("\nUsage: ./priv/cnode_server <sname> <hostname> <cookie> <tname>\n\n");
-    printf("    sname      the short name you want this c-node to connect as\n");
-    printf("    hostname   the hostname\n");
-    printf("    cookie     the authentication cookie\n");
-    printf("    tname      the target node short name to connect to");
-    return 0;
-  }
+static void usage (void) NORETURN;
+static void usage (void) {
+  fputs ("usage: myhtml_worker sname hostname cookie tname\n\n"
+         "   sname      the short name you want this c-node to connect as\n"
+         "   hostname   the hostname\n"
+         "   cookie     the authentication cookie\n"
+         "   tname      the target node short name to connect to\n", stderr);
+  exit (EXIT_FAILURE);
+}
 
-  char *sname = argv[1];
-  char *hostname = argv[2];
-  char *cookie = argv[3];
-  char *tname = argv[4];
+int main(int argc, const char *argv[]) {
+  if (argc != 5)
+    usage ();
+
+  const char *sname = argv[1];
+  const char *hostname = argv[2];
+  const char *cookie = argv[3];
+  const char *tname = argv[4];
+
   char full_name[1024];
   char target_node[1024];
 
