@@ -26,20 +26,22 @@ typedef struct _state_t {
   ei_x_buff buffer;
 } state_t;
 
+typedef enum parse_flags_e {
+  FLAG_HTML_ATOMS       = 1 << 0,
+  FLAG_NIL_SELF_CLOSING = 1 << 1,
+  FLAG_COMMENT_TUPLE3   = 1 << 2
+} parse_flags_t;
+
 static void handle_emsg(state_t * state, erlang_msg * emsg);
 static void handle_send(state_t * state, erlang_msg * emsg);
 static void err_term(ei_x_buff * response, const char * error_atom);
-static unsigned char decode_parse_flags(state_t * state, int arity);
-static void decode(state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, unsigned char parse_flags);
+static parse_flags_t decode_parse_flags(state_t * state, int arity);
+static void decode(state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, parse_flags_t parse_flags);
 
-static void build_tree(ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_node_t * node, unsigned char parse_flags);
+static void build_tree(ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_node_t * node, parse_flags_t parse_flags);
 static void prepare_node_attrs(ei_x_buff * response, myhtml_tree_node_t * node);
 
 static inline char * lowercase(char * c);
-
-const unsigned char FLAG_HTML_ATOMS       = 1 << 0;
-const unsigned char FLAG_NIL_SELF_CLOSING = 1 << 1;
-const unsigned char FLAG_COMMENT_TUPLE3   = 1 << 2;
 
 #ifdef __GNUC__
 # define AFP(x, y) __attribute__((format (printf, x, y)))
@@ -226,7 +228,7 @@ static void handle_send (state_t * state, erlang_msg * emsg)
   if (ei_decode_list_header (state->buffer.buff, &state->buffer.index, &arity) < 0)
     panic ("failed to decode options list header in message");
 
-  unsigned char parse_flags = decode_parse_flags (state, arity);
+  parse_flags_t parse_flags = decode_parse_flags (state, arity);
   decode (state, &response, bin_data, bin_size, parse_flags);
 
   free (bin_data);
@@ -250,9 +252,9 @@ static void err_term (ei_x_buff * response, const char * error_atom)
   ei_x_encode_atom (response, error_atom);
 }
 
-static unsigned char decode_parse_flags (state_t * state, int arity)
+static parse_flags_t decode_parse_flags (state_t * state, int arity)
 {
-  unsigned char parse_flags = 0;
+  parse_flags_t parse_flags = 0;
 
   for (int i = 0; i < arity; i++)
   {
@@ -272,7 +274,7 @@ static unsigned char decode_parse_flags (state_t * state, int arity)
   return parse_flags;
 }
 
-static void decode (state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, unsigned char parse_flags)
+static void decode (state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, parse_flags_t parse_flags)
 {
   myhtml_tree_t * tree = myhtml_tree_create ();
   myhtml_tree_init (tree, state->myhtml);
@@ -298,7 +300,7 @@ static void decode (state_t * state, ei_x_buff * response, const char * bin_data
 // - an attribute list
 // - a children list
 // in this function, we prepare the atom and complete attribute list
-static void prepare_tag_header (ei_x_buff * response, const char * tag_string, myhtml_tree_node_t * node, unsigned char parse_flags)
+static void prepare_tag_header (ei_x_buff * response, const char * tag_string, myhtml_tree_node_t * node, parse_flags_t parse_flags)
 {
   myhtml_tag_id_t tag_id = myhtml_node_tag_id (node);
   myhtml_namespace_t tag_ns = myhtml_node_namespace (node);
@@ -343,7 +345,7 @@ static void prepare_node_attrs(ei_x_buff * response, myhtml_tree_node_t * node)
 }
 
 // dump a comment node
-static void prepare_comment (ei_x_buff * response, const char * node_comment, size_t comment_len, unsigned char parse_flags)
+static void prepare_comment (ei_x_buff * response, const char * node_comment, size_t comment_len, parse_flags_t parse_flags)
 {
   ei_x_encode_tuple_header (response, parse_flags & FLAG_COMMENT_TUPLE3 ? 3 : 2);
   ei_x_encode_atom (response, "comment");
@@ -379,7 +381,7 @@ static void prepare_comment (ei_x_buff * response, const char * node_comment, si
 
 #endif
 
-static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_node_t * node, unsigned char parse_flags)
+static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_node_t * node, parse_flags_t parse_flags)
 {
   myhtml_tree_node_t * current_node = node;
 
