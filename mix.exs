@@ -93,6 +93,16 @@ defmodule Mix.Tasks.Compile.MyhtmlexMake do
         end
   end
 
+  defp otp_version do
+    :erlang.system_info(:otp_release)
+    |> to_string()
+    |> String.to_integer()
+  end
+
+  defp otp_22_or_newer? do
+    otp_version() >= 22
+  end
+
   def run(_) do
     make_cmd = find_make()
 
@@ -105,7 +115,10 @@ defmodule Mix.Tasks.Compile.MyhtmlexMake do
           make_cmd,
           @artifacts,
           stderr_to_stdout: true,
-          env: [{"MIX_ENV", to_string(Mix.env())}]
+          env: [
+            {"MIX_ENV", to_string(Mix.env())},
+            {"OTP22_DEF", (otp_22_or_newer?() && "YES") || "NO"}
+          ]
         )
 
       IO.binwrite(result)
