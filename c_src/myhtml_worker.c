@@ -19,21 +19,21 @@
 #include <myhtml/myhtml.h>
 #include <myhtml/mynamespace.h>
 
-#define BUFFER_SIZE 4096
-
 typedef struct _state_t {
   int fd;
-  myhtml_t* myhtml;
+  myhtml_t * myhtml;
   ei_cnode ec;
   bool looping;
+  ei_x_buff buffer;
 } state_t;
 
-void handle_emsg(state_t* state, ErlMessage* emsg);
-void handle_send(state_t* state, ErlMessage* emsg);
+static void handle_emsg(state_t * state, erlang_msg * emsg);
+static void handle_send(state_t * state, erlang_msg * emsg);
+static void err_term(ei_x_buff * response, const char * error_atom);
+
 ETERM * decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args);
 ETERM * build_tree(myhtml_tree_t* tree, myhtml_tree_node_t* node, unsigned char* parse_flags);
 ETERM * build_node_attrs(myhtml_tree_t* tree, myhtml_tree_node_t* node);
-ETERM * err_term(const char* error_atom);
 unsigned char read_parse_flags(ETERM* list);
 static inline char * lowercase(char* c);
 
@@ -98,26 +98,23 @@ int main(int argc, const char *argv[]) {
   // fd to erlang node
   state_t* state = calloc (1, sizeof(state_t));
   state->looping = true;
-
-  int buffer_size = BUFFER_SIZE;
-  unsigned char* bufferpp = calloc (1, BUFFER_SIZE);
-  ErlMessage emsg;
+  ei_x_new (&state->buffer);
 
   // initialize all of Erl_Interface
   erl_init(NULL, 0);
 
   // initialize this node
   printf("initialising %s\n", full_name);
-  if (ei_connect_xinit(&state->ec, hostname, sname, full_name, &addr, cookie, 0) == -1)
+  if (ei_connect_xinit (&state->ec, hostname, sname, full_name, &addr, cookie, 0) == -1)
     panic ("ei_connect_xinit failed.");
 
   // connect to target node
   printf("connecting to %s\n", target_node);
-  if ((state->fd = ei_connect(&state->ec, target_node)) < 0)
+  if ((state->fd = ei_connect (&state->ec, target_node)) < 0)
     panic ("ei_connect failed.");
 
-  state->myhtml = myhtml_create();
-  myhtml_init(state->myhtml, MyHTML_OPTIONS_DEFAULT, 1, 0);
+  state->myhtml = myhtml_create ();
+  myhtml_init (state->myhtml, MyHTML_OPTIONS_DEFAULT, 1, 0);
 
   // signal to stdout that we are ready
   printf ("%s ready\n", full_name);
@@ -125,38 +122,36 @@ int main(int argc, const char *argv[]) {
 
   while (state->looping)
   {
-    // erl_xreceive_msg adapts the buffer width
-    switch( erl_xreceive_msg(state->fd, &bufferpp, &buffer_size, &emsg) )
+    erlang_msg emsg;
+
+    switch (ei_xreceive_msg (state->fd, &emsg, &state->buffer))
     {
       case ERL_TICK:
-        // ignore
         break;
       case ERL_ERROR:
-        state->looping = false;
+        panic ("ei_xreceive_msg: %s\n", strerror (erl_errno));
         break;
       default:
-        handle_emsg(state, &emsg);
+        handle_emsg (state, &emsg);
+        break;
     }
   }
 
-  // shutdown: free all erlang terms still around
-  erl_eterm_release();
-  free(bufferpp);
-
-  myhtml_destroy(state->myhtml);
-  free(state);
+  // shutdown: free all state
+  ei_x_free (&state->buffer);
+  myhtml_destroy (state->myhtml);
+  free (state);
 
   return EXIT_SUCCESS;
 }
 
-void
-handle_emsg(state_t* state, ErlMessage* emsg)
+static void handle_emsg (state_t * state, erlang_msg * emsg)
 {
-  switch(emsg->type)
+  switch (emsg->msgtype)
   {
     case ERL_REG_SEND:
     case ERL_SEND:
-      handle_send(state, emsg);
+      handle_send (state, emsg);
       break;
     case ERL_LINK:
     case ERL_UNLINK:
@@ -164,17 +159,23 @@ handle_emsg(state_t* state, ErlMessage* emsg)
     case ERL_EXIT:
       break;
   }
-  // its our responsibility to free these pointers
-  erl_free_compound(emsg->msg);
-  erl_free_compound(emsg->to);
-  erl_free_compound(emsg->from);
 }
 
-void
-handle_send(state_t* state, ErlMessage* emsg)
+// handle ERL_SEND message type.
+// we expect a tuple with arity of 3 in state->buffer.
+// we expect the first argument to be an atom (`decode`),
+// the second argument to be the HTML payload, and the
+// third argument to be the argument list.
+// any other message: respond with an {error, unknown_call} tuple.
+static void handle_send (state_t * state, erlang_msg * emsg)
 {
+  // response holds our response, prepare it
+  ei_x_buff response;
+
+  ei_x_new (&response);
+
+#if 0
   ETERM *decode_pattern = erl_format("{decode, Bin, Args}");
-  ETERM *response;
 
   if (erl_match(decode_pattern, emsg->msg))
   {
@@ -188,30 +189,22 @@ handle_send(state_t* state, ErlMessage* emsg)
     erl_free_term(args);
   }
   else
-  {
-    response = err_term("unknown_call");
-    return;
-  }
+#endif
+    err_term (&response, "unknown_call");
 
   // send response
-  erl_send(state->fd, emsg->from, response);
-
-  // free allocated resources
-  erl_free_compound(response);
-  erl_free_term(decode_pattern);
-
-  // free the free-list
-  erl_eterm_release();
+  ei_send (state->fd, &emsg->from, response.buff, response.buffsz);
 
   return;
 }
 
-ETERM*
-err_term(const char* error_atom)
+static void err_term (ei_x_buff * response, const char * error_atom)
 {
-  /* ETERM* tuple2[] = {erl_mk_atom("error"), erl_mk_atom(error_atom)}; */
-  /* return erl_mk_tuple(tuple2, 2); */
-  return erl_format("{error, ~w}", erl_mk_atom(error_atom));
+  response->index = 0;
+  ei_x_encode_version (response);
+  ei_x_encode_tuple_header (response, 2);
+  ei_x_encode_atom (response, "error");
+  ei_x_encode_atom (response, error_atom);
 }
 
 ETERM*
@@ -221,7 +214,7 @@ decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args)
 
   if (!ERL_IS_BINARY(bin) || !ERL_IS_LIST(args))
   {
-    return err_term("badarg");
+//    return err_term("badarg");
   }
 
   // get contents of binary argument
@@ -235,7 +228,7 @@ decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args)
   mystatus_t status = myhtml_parse(tree, MyENCODING_UTF_8, binary, binary_len);
   if (status != MyHTML_STATUS_OK)
   {
-    return err_term("myhtml_parse_failed");
+//    return err_term("myhtml_parse_failed");
   }
 
   // read parse flags
