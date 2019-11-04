@@ -12,6 +12,9 @@
 #include <ctype.h>
 
 #include "ei.h"
+#ifndef OTP_22_OR_NEWER
+# include "erl_interface.h"
+#endif
 
 #include <myhtml/myhtml.h>
 #include <myhtml/mynamespace.h>
@@ -79,8 +82,12 @@ static void usage (void) {
 }
 
 int main(int argc, const char *argv[]) {
+#ifdef OTP_22_OR_NEWER
   // initialize erlang client library
   ei_init ();
+#else
+  erl_init (NULL, -1);
+#endif
 
   if (argc != 5)
     usage ();
