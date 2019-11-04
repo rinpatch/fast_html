@@ -1,5 +1,5 @@
 MIX = mix
-MYHTMLEX_CFLAGS = -g -O2 -std=c99 -pedantic -Wcomment -Wall
+MYHTMLEX_CFLAGS = -g -O2 -std=c99 -pedantic -Wcomment -Wextra -Wno-old-style-declaration -Wall
 # we need to compile position independent code
 MYHTMLEX_CFLAGS += -fpic -DPIC
 # For some reason __erl_errno is undefined unless _REENTRANT is defined
