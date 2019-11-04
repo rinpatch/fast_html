@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <ctype.h>
 
-#include "erl_interface.h"
 #include "ei.h"
 
 #include <myhtml/myhtml.h>
@@ -79,6 +78,9 @@ static void usage (void) {
 }
 
 int main(int argc, const char *argv[]) {
+  // initialize erlang client library
+  ei_init ();
+
   if (argc != 5)
     usage ();
 
@@ -90,8 +92,8 @@ int main(int argc, const char *argv[]) {
   char full_name[1024];
   char target_node[1024];
 
-  snprintf(full_name, sizeof full_name, "%s@%s", sname, hostname);
-  snprintf(target_node, sizeof target_node, "%s@%s", tname, hostname);
+  snprintf (full_name, sizeof full_name, "%s@%s", sname, hostname);
+  snprintf (target_node, sizeof target_node, "%s@%s", tname, hostname);
 
   struct in_addr addr;
   addr.s_addr = htonl(INADDR_ANY);
@@ -101,16 +103,13 @@ int main(int argc, const char *argv[]) {
   state->looping = true;
   ei_x_new (&state->buffer);
 
-  // initialize all of Erl_Interface
-  erl_init(NULL, 0);
-
   // initialize this node
-  printf("initialising %s\n", full_name);
+  printf ("initialising %s\n", full_name);
   if (ei_connect_xinit (&state->ec, hostname, sname, full_name, &addr, cookie, 0) == -1)
     panic ("ei_connect_xinit failed.");
 
   // connect to target node
-  printf("connecting to %s\n", target_node);
+  printf ("connecting to %s\n", target_node);
   if ((state->fd = ei_connect (&state->ec, target_node)) < 0)
     panic ("ei_connect failed.");
 
@@ -487,15 +486,15 @@ static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_
   }
 }
 
-static inline char*
-lowercase(char* c)
+static inline char * lowercase(char* c)
 {
-  char* p = c;
-  while(*p)
+  char * p = c;
+
+  while (*p)
   {
-    *p = tolower((unsigned char)*p);
+    *p = tolower ((unsigned char) *p);
     p++;
   }
+
   return c;
 }
-

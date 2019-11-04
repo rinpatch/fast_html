@@ -38,7 +38,7 @@ ERL_INTERFACE = $(wildcard $(ERLANG_PATH)/../lib/erl_interface-*)
 CNODE_CFLAGS = $(MYHTMLEX_CFLAGS)
 CNODE_CFLAGS += -L$(ERL_INTERFACE)/lib
 CNODE_CFLAGS += -I$(ERL_INTERFACE)/include
-CNODE_CFLAGS += -lerl_interface -lei -pthread
+CNODE_CFLAGS += -lei -pthread
 
 # enumerate docker build tests
 BUILD_TESTS := $(patsubst %.dockerfile, %.dockerfile.PHONY, $(wildcard ./build-test/*.dockerfile))
