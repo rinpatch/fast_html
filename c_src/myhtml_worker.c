@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -46,6 +47,26 @@ const unsigned char FLAG_HTML_ATOMS       = 1 << 0;
 const unsigned char FLAG_NIL_SELF_CLOSING = 1 << 1;
 const unsigned char FLAG_COMMENT_TUPLE3   = 1 << 2;
 
+#ifdef __GNUC__
+# define AFP(x, y) __attribute__((format (printf, x, y)))
+#else
+# define AFP(x, y)
+#endif
+
+static void panic(const char *fmt, ...) AFP(1, 2);
+
+static void panic(const char *fmt, ...) {
+  char buf[4096];
+  va_list va;
+
+  va_start (va, fmt);
+  vsnprintf (buf, sizeof buf, fmt, va);
+  va_end (va);
+
+  fprintf (stderr, "myhtml worker: error: %s\n", buf);
+  exit (EXIT_FAILURE);
+}
+
 int main(int argc, char **argv) {
   if (argc != 5 || !strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
     printf("\nUsage: ./priv/cnode_server <sname> <hostname> <cookie> <tname>\n\n");
@@ -82,12 +103,12 @@ int main(int argc, char **argv) {
   // initialize this node
   printf("initialising %s\n", full_name); fflush(stdout);
   if ( erl_connect_xinit(hostname, sname, full_name, &addr, cookie, 0) == -1 )
-    erl_err_quit("error erl_connect_init");
+    panic("error erl_connect_init");
 
   // connect to target node
   printf("connecting to %s\n", target_node); fflush(stdout);
   if ((state->fd = erl_connect(target_node)) < 0)
-    erl_err_quit("erl_connect");
+    panic("erl_connect");
 
   state->myhtml = myhtml_create();
   myhtml_init(state->myhtml, MyHTML_OPTIONS_DEFAULT, 1, 0);
