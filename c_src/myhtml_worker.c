@@ -24,24 +24,18 @@
 typedef struct _state_t {
   int fd;
   myhtml_t* myhtml;
+  ei_cnode ec;
+  bool looping;
 } state_t;
 
-void
-handle_emsg(state_t* state, ErlMessage* emsg);
-void
-handle_send(state_t* state, ErlMessage* emsg);
-ETERM*
-decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args);
-ETERM*
-build_tree(myhtml_tree_t* tree, myhtml_tree_node_t* node, unsigned char* parse_flags);
-ETERM*
-build_node_attrs(myhtml_tree_t* tree, myhtml_tree_node_t* node);
-ETERM*
-err_term(const char* error_atom);
-unsigned char
-read_parse_flags(ETERM* list);
-static inline char *
-lowercase(char* c);
+void handle_emsg(state_t* state, ErlMessage* emsg);
+void handle_send(state_t* state, ErlMessage* emsg);
+ETERM * decode(state_t* state, ErlMessage* emsg, ETERM* bin, ETERM* args);
+ETERM * build_tree(myhtml_tree_t* tree, myhtml_tree_node_t* node, unsigned char* parse_flags);
+ETERM * build_node_attrs(myhtml_tree_t* tree, myhtml_tree_node_t* node);
+ETERM * err_term(const char* error_atom);
+unsigned char read_parse_flags(ETERM* list);
+static inline char * lowercase(char* c);
 
 const unsigned char FLAG_HTML_ATOMS       = 1 << 0;
 const unsigned char FLAG_NIL_SELF_CLOSING = 1 << 1;
@@ -102,53 +96,43 @@ int main(int argc, const char *argv[]) {
   addr.s_addr = htonl(INADDR_ANY);
 
   // fd to erlang node
-  state_t* state = (state_t*)malloc(sizeof(state_t));
-  bool looping = true;
+  state_t* state = calloc (1, sizeof(state_t));
+  state->looping = true;
+
   int buffer_size = BUFFER_SIZE;
-  unsigned char* bufferpp = (unsigned char*)malloc(BUFFER_SIZE);
+  unsigned char* bufferpp = calloc (1, BUFFER_SIZE);
   ErlMessage emsg;
 
   // initialize all of Erl_Interface
   erl_init(NULL, 0);
 
   // initialize this node
-  printf("initialising %s\n", full_name); fflush(stdout);
-  if ( erl_connect_xinit(hostname, sname, full_name, &addr, cookie, 0) == -1 )
-    panic("error erl_connect_init");
+  printf("initialising %s\n", full_name);
+  if (ei_connect_xinit(&state->ec, hostname, sname, full_name, &addr, cookie, 0) == -1)
+    panic ("ei_connect_xinit failed.");
 
   // connect to target node
-  printf("connecting to %s\n", target_node); fflush(stdout);
-  if ((state->fd = erl_connect(target_node)) < 0)
-    panic("erl_connect");
+  printf("connecting to %s\n", target_node);
+  if ((state->fd = ei_connect(&state->ec, target_node)) < 0)
+    panic ("ei_connect failed.");
 
   state->myhtml = myhtml_create();
   myhtml_init(state->myhtml, MyHTML_OPTIONS_DEFAULT, 1, 0);
 
   // signal to stdout that we are ready
-  printf("%s ready\n", full_name); fflush(stdout);
+  printf ("%s ready\n", full_name);
+  fflush (stdout);
 
-  while (looping)
+  while (state->looping)
   {
     // erl_xreceive_msg adapts the buffer width
     switch( erl_xreceive_msg(state->fd, &bufferpp, &buffer_size, &emsg) )
-    // erl_receive_msg, uses a fixed buffer width
-    /* switch( erl_receive_msg(state->fd, buffer, BUFFER_SIZE, &emsg) ) */
     {
       case ERL_TICK:
         // ignore
         break;
       case ERL_ERROR:
-        // On failure, the function returns ERL_ERROR and sets erl_errno to one of:
-        //
-        // EMSGSIZE
-        // Buffer is too small.
-        // ENOMEM
-        // No more memory is available.
-        // EIO
-        // I/O error.
-        //
-        // TODO: what is the correct reaction?
-        looping = false;
+        state->looping = false;
         break;
       default:
         handle_emsg(state, &emsg);
