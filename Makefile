@@ -1,5 +1,5 @@
 MIX = mix
-MYHTMLEX_CFLAGS = -g -O2 -std=c99 -pedantic -Wcomment -Wall
+MYHTMLEX_CFLAGS = -g -O2 -std=c99 -pedantic -Wcomment -Wextra -Wno-old-style-declaration -Wall
 # we need to compile position independent code
 MYHTMLEX_CFLAGS += -fpic -DPIC
 # For some reason __erl_errno is undefined unless _REENTRANT is defined
@@ -38,7 +38,16 @@ ERL_INTERFACE = $(wildcard $(ERLANG_PATH)/../lib/erl_interface-*)
 CNODE_CFLAGS = $(MYHTMLEX_CFLAGS)
 CNODE_CFLAGS += -L$(ERL_INTERFACE)/lib
 CNODE_CFLAGS += -I$(ERL_INTERFACE)/include
-CNODE_CFLAGS += -lerl_interface -lei -pthread
+
+CNODE_LDFLAGS =
+
+ifeq ($(OTP22_DEF),YES)
+  CNODE_CFLAGS += -DOTP_22_OR_NEWER
+else
+  CNODE_LDFLAGS += -lerl_interface
+endif
+
+CNODE_LDFLAGS += -lei -pthread
 
 # enumerate docker build tests
 BUILD_TESTS := $(patsubst %.dockerfile, %.dockerfile.PHONY, $(wildcard ./build-test/*.dockerfile))
@@ -65,7 +74,7 @@ $(MYHTML_STATIC): $(MYHTML_PATH)
 	$(MAKE) -C $(MYHTML_PATH) library MyCORE_BUILD_WITHOUT_THREADS=YES
 
 priv/myhtml_worker: c_src/myhtml_worker.c $(MYHTML_STATIC)
-	$(CC) -o $@ $< $(MYHTML_STATIC) $(CNODE_CFLAGS)
+	$(CC) -o $@ $< $(MYHTML_STATIC) $(CNODE_CFLAGS) $(CNODE_LDFLAGS)
 
 clean: clean-myhtml
 	$(RM) -r priv/myhtmlex*
