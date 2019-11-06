@@ -8,7 +8,7 @@ defmodule FastHTML.Mixfile do
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
-      compilers: [:my_html_worker_make] ++ Mix.compilers(),
+      compilers: [:fast_html_cnode_make] ++ Mix.compilers(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       name: "FastHTML",
@@ -78,7 +78,7 @@ defmodule FastHTML.Mixfile do
   end
 end
 
-defmodule Mix.Tasks.Compile.MyHtmlWorkerMake do
+defmodule Mix.Tasks.Compile.FastHtmlCnodeMake do
   @artifacts [
     "priv/myhtml_worker"
   ]
@@ -108,25 +108,40 @@ defmodule Mix.Tasks.Compile.MyHtmlWorkerMake do
   def run(_) do
     make_cmd = find_make()
 
-    if match?({:win32, _}, :os.type()) do
-      IO.warn("Windows is not yet a target.")
-      exit(1)
+    exit_code =
+      if match?({:win32, _}, :os.type()) do
+        IO.warn("Windows is not yet a target.")
+        1
+      else
+        {result, exit_code} =
+          System.cmd(
+            make_cmd,
+            @artifacts,
+            stderr_to_stdout: true,
+            env: [
+              {"MIX_ENV", to_string(Mix.env())},
+              {"OTP22_DEF", (otp_22_or_newer?() && "YES") || "NO"}
+            ]
+          )
+
+        IO.binwrite(result)
+        exit_code
+      end
+
+    if exit_code == 0 do
+      :ok
     else
-      {result, _error_code} =
-        System.cmd(
-          make_cmd,
-          @artifacts,
-          stderr_to_stdout: true,
-          env: [
-            {"MIX_ENV", to_string(Mix.env())},
-            {"OTP22_DEF", (otp_22_or_newer?() && "YES") || "NO"}
-          ]
-        )
-
-      IO.binwrite(result)
+      {:error,
+       [
+         %Mix.Task.Compiler.Diagnostic{
+           compiler_name: "FastHTML Cnode",
+           message: "Make exited with #{exit_code}",
+           severity: :error,
+           file: nil,
+           position: nil
+         }
+       ]}
     end
-
-    :ok
   end
 
   def clean() do
