@@ -41,10 +41,6 @@ defmodule Myhtmlex do
           | comment_node3()
   @type format_flag() :: :html_atoms | :nil_self_closing | :comment_tuple3
 
-  defp module() do
-    Application.get_env(:myhtmlex, :mode, Myhtmlex.Safe)
-  end
-
   @doc """
   Returns a tree representation from the given html string.
 
@@ -100,6 +96,6 @@ defmodule Myhtmlex do
   """
   @spec decode(String.t(), format: [format_flag()]) :: tree()
   def decode(bin, format: flags) do
-    module().decode(bin, flags)
+    Myhtmlex.Safe.decode(bin, flags)
   end
 end
