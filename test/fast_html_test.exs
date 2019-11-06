@@ -1,9 +1,9 @@
-defmodule Myhtmlex.SafeTest do
+defmodule :fast_html_test do
   use ExUnit.Case
-  doctest Myhtmlex
+  doctest :fast_html
 
   test "doesn't segfault when <!----> is encountered" do
-    assert {"html", _attrs, _children} = Myhtmlex.decode("<div> <!----> </div>")
+    assert {"html", _attrs, _children} = :fast_html.decode("<div> <!----> </div>")
   end
 
   test "builds a tree, formatted like mochiweb by default" do
@@ -14,7 +14,7 @@ defmodule Myhtmlex.SafeTest do
                [
                  {"br", [], []}
                ]}
-            ]} = Myhtmlex.decode("<br>")
+            ]} = :fast_html.decode("<br>")
   end
 
   test "builds a tree, html tags as atoms" do
@@ -25,7 +25,7 @@ defmodule Myhtmlex.SafeTest do
                [
                  {:br, [], []}
                ]}
-            ]} = Myhtmlex.decode("<br>", format: [:html_atoms])
+            ]} = :fast_html.decode("<br>", format: [:html_atoms])
   end
 
   test "builds a tree, nil self closing" do
@@ -37,7 +37,7 @@ defmodule Myhtmlex.SafeTest do
                  {"br", [], nil},
                  {"esi:include", [], nil}
                ]}
-            ]} = Myhtmlex.decode("<br><esi:include />", format: [:nil_self_closing])
+            ]} = :fast_html.decode("<br><esi:include />", format: [:nil_self_closing])
   end
 
   test "builds a tree, multiple format options" do
@@ -48,7 +48,7 @@ defmodule Myhtmlex.SafeTest do
                [
                  {:br, [], nil}
                ]}
-            ]} = Myhtmlex.decode("<br>", format: [:html_atoms, :nil_self_closing])
+            ]} = :fast_html.decode("<br>", format: [:html_atoms, :nil_self_closing])
   end
 
   test "attributes" do
@@ -60,7 +60,7 @@ defmodule Myhtmlex.SafeTest do
                  {:span, [{"id", "test"}, {"class", "foo garble"}], []}
                ]}
             ]} =
-             Myhtmlex.decode(~s'<span id="test" class="foo garble"></span>',
+             :fast_html.decode(~s'<span id="test" class="foo garble"></span>',
                format: [:html_atoms]
              )
   end
@@ -74,7 +74,7 @@ defmodule Myhtmlex.SafeTest do
                  {:button, [{"disabled", "disabled"}, {"class", "foo garble"}], []}
                ]}
             ]} =
-             Myhtmlex.decode(~s'<button disabled class="foo garble"></span>',
+             :fast_html.decode(~s'<button disabled class="foo garble"></span>',
                format: [:html_atoms]
              )
   end
@@ -87,7 +87,7 @@ defmodule Myhtmlex.SafeTest do
                [
                  "text node"
                ]}
-            ]} = Myhtmlex.decode(~s'<body>text node</body>', format: [:html_atoms])
+            ]} = :fast_html.decode(~s'<body>text node</body>', format: [:html_atoms])
   end
 
   test "broken input" do
@@ -98,7 +98,7 @@ defmodule Myhtmlex.SafeTest do
                [
                  {:a, [{"<", "<"}], [" asdf"]}
                ]}
-            ]} = Myhtmlex.decode(~s'<a <> asdf', format: [:html_atoms])
+            ]} = :fast_html.decode(~s'<a <> asdf', format: [:html_atoms])
   end
 
   test "namespaced tags" do
@@ -113,7 +113,7 @@ defmodule Myhtmlex.SafeTest do
                     {"svg:a", [], []}
                   ]}
                ]}
-            ]} = Myhtmlex.decode(~s'<svg><path></path><a></a></svg>', format: [:html_atoms])
+            ]} = :fast_html.decode(~s'<svg><path></path><a></a></svg>', format: [:html_atoms])
   end
 
   test "custom namespaced tags" do
@@ -124,7 +124,7 @@ defmodule Myhtmlex.SafeTest do
                [
                  {"esi:include", [], nil}
                ]}
-            ]} = Myhtmlex.decode(~s'<esi:include />', format: [:html_atoms, :nil_self_closing])
+            ]} = :fast_html.decode(~s'<esi:include />', format: [:html_atoms, :nil_self_closing])
   end
 
   test "html comments" do
@@ -135,6 +135,6 @@ defmodule Myhtmlex.SafeTest do
                [
                  comment: " a comment "
                ]}
-            ]} = Myhtmlex.decode(~s'<body><!-- a comment --></body>', format: [:html_atoms])
+            ]} = :fast_html.decode(~s'<body><!-- a comment --></body>', format: [:html_atoms])
   end
 end

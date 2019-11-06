@@ -14,17 +14,17 @@ defmodule CnodeFileSizesBench do
 
   bench "github_trending_js.html 341k" do
     {ref, _, _} = bench_context
-    Myhtmlex.Safe.decode(ref)
+    :fast_html.decode(ref)
   end
 
   bench "w3c_html5.html 131k" do
     {_, ref, _} = bench_context
-    Myhtmlex.Safe.decode(ref)
+    :fast_html.decode(ref)
   end
 
   bench "wikipedia_hyperlink.html 97k" do
     {_, _, ref} = bench_context
-    Myhtmlex.Safe.decode(ref)
+    :fast_html.decode(ref)
   end
 
 end

@@ -1,22 +1,24 @@
-defmodule Myhtmlex.Mixfile do
+defmodule FastHTML.Mixfile do
   use Mix.Project
 
   def project do
     [
-      app: :myhtmlex,
+      app: :fast_html,
       version: "0.2.1",
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
-      compilers: [:myhtmlex_make] ++ Mix.compilers(),
+      compilers: [:my_html_worker_make] ++ Mix.compilers(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
-      name: "Myhtmlex",
+      name: "FastHTML",
       description: """
         A module to decode HTML into a tree,
         porting all properties of the underlying
         library myhtml, being fast and correct
         in regards to the html spec.
+
+        Originally based on Myhtmlex.
       """,
       docs: docs()
     ]
@@ -24,11 +26,11 @@ defmodule Myhtmlex.Mixfile do
 
   def package do
     [
-      maintainers: ["Lukas Rieder"],
+      maintainers: ["Ariadne Conill"],
       licenses: ["GNU LGPL"],
       links: %{
-        "Github" => "https://git.pleroma.social/pleroma/myhtmlex",
-        "Issues" => "https://git.pleroma.social/pleroma/myhtmlex/issues",
+        "GitLab" => "https://git.pleroma.social/pleroma/fast_html",
+        "Issues" => "https://git.pleroma.social/pleroma/fast_html/issues",
         "MyHTML" => "https://github.com/lexborisov/myhtml"
       },
       files: [
@@ -71,12 +73,12 @@ defmodule Myhtmlex.Mixfile do
 
   defp docs do
     [
-      main: "Myhtmlex"
+      main: "FastHTML"
     ]
   end
 end
 
-defmodule Mix.Tasks.Compile.MyhtmlexMake do
+defmodule Mix.Tasks.Compile.MyHtmlWorkerMake do
   @artifacts [
     "priv/myhtml_worker"
   ]
