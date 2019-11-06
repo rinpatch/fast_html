@@ -1,13 +1,14 @@
-# Myhtmlex
+# FastHTML
 
-Bindings for lexborisov's [myhtml](https://github.com/lexborisov/myhtml).
+A C Node wrapping lexborisov's [myhtml](https://github.com/lexborisov/myhtml).
+Primarily used with [FastSanitize](https://git.pleroma.social/pleroma/fast_sanitize).
 
-* Available as a hex package: `{:myhtmlex, "~> 0.2.0"}`
-* [Documentation](https://hexdocs.pm/myhtmlex/Myhtmlex.html)
+* Available as a hex package: `{:fast_html, "~> 0.1.0"}`
+* [Documentation](https://hexdocs.pm/fast_html/FastHTML.html)
 
 ## Example
 
-    iex> Myhtmlex.decode("<h1>Hello world</h1>")
+    iex> :fast_html.decode("<h1>Hello world</h1>")
     {"html", [], [{"head", [], []}, {"body", [], [{"h1", [], ["Hello world"]}]}]}
 
   Benchmark results (removed Nif calling mode) on various file sizes on a 2,5Ghz Core i7:
@@ -31,17 +32,4 @@ Bindings for lexborisov's [myhtml](https://github.com/lexborisov/myhtml).
 ## Contribution / Bug Reports
 
 * Please make sure you do `git submodule update` after a checkout/pull
-* If you have problems building the project, please consider adding a Dockerfile to `build-tests/` to replicate the build error
 * The project aims to be fully tested
-
-## Roadmap
-
-The exposed functions on `Myhtmlex` are not subject to change.
-This project is under active development.
-
-* [ ] Expose node-retrieval functions
-* [x] Parse a HTML-document into a tree
-* [x] Investigate safety and calling options
-  * [x] Call as dirty-nif
-  * [x] Call as C-Node (check branch `c-node`)
-
