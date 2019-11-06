@@ -283,6 +283,7 @@ static void decode (state_t * state, ei_x_buff * response, const char * bin_data
 {
   myhtml_tree_t * tree = myhtml_tree_create ();
   myhtml_tree_init (tree, state->myhtml);
+  myhtml_tree_parse_flags_set (tree, MyHTML_TREE_PARSE_FLAGS_WITHOUT_DOCTYPE_IN_TREE);
 
   // parse tree
   mystatus_t status = myhtml_parse (tree, MyENCODING_UTF_8, bin_data, bin_size);
