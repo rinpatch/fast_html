@@ -49,12 +49,9 @@ defmodule FastHTML.Mixfile do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Myhtmlex.Safe, []},
+      mod: {FastHtml.Application, []},
       # used to detect conflicts with other applications named processes
-      registered: [Myhtmlex.Safe.Cnode, Myhtmlex.Safe.Supervisor],
-      env: [
-        mode: Myhtmlex.Safe
-      ]
+      registered: [FastHtml.Cnode, FastHtml.Supervisor]
     ]
   end
 
@@ -63,11 +60,7 @@ defmodule FastHTML.Mixfile do
       # documentation helpers
       {:ex_doc, ">= 0.0.0", only: :dev},
       # benchmarking helpers
-      {:benchfella, "~> 0.3.0", only: :dev},
-      # cnode helpers
-      {:nodex,
-       git: "https://git.pleroma.social/pleroma/nodex",
-       ref: "cb6730f943cfc6aad674c92161be23a8411f15d1"}
+      {:benchee, "~> 1.0", only: :dev}
     ]
   end
 

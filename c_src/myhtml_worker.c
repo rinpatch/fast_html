@@ -395,6 +395,8 @@ static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_
   // ok we're going to send an actual response so start encoding it
   response->index = 0;
   ei_x_encode_version (response);
+  ei_x_encode_tuple_header(response, 2);
+  ei_x_encode_atom(response, "myhtml_worker");
 
   while (current_node != NULL)
   {
@@ -447,7 +449,7 @@ static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_
         strncpy (tag_string, tag_name, sizeof buffer - 1);
       }
 
-      if (response->index > 1)
+      if (stack.used > 0)
       {
         EMIT_LIST_HDR;
       }
