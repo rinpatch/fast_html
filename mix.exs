@@ -63,7 +63,7 @@ defmodule FastHTML.Mixfile do
       # documentation helpers
       {:ex_doc, ">= 0.0.0", only: :dev},
       # benchmarking helpers
-      {:benchfella, "~> 0.3.0", only: :dev},
+      {:benchee, "~> 1.0", only: :dev},
       # cnode helpers
       {:nodex,
        git: "https://git.pleroma.social/pleroma/nodex",

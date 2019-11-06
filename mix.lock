@@ -1,6 +1,7 @@
 %{
-  "benchfella": {:hex, :benchfella, "0.3.5", "b2122c234117b3f91ed7b43b6e915e19e1ab216971154acd0a80ce0e9b8c05f5", [:mix], [], "hexpm"},
+  "benchee": {:hex, :benchee, "1.0.1", "66b211f9bfd84bd97e6d1beaddf8fc2312aaabe192f776e8931cb0c16f53a521", [:mix], [{:deep_merge, "~> 1.0", [hex: :deep_merge, repo: "hexpm", optional: false]}], "hexpm"},
   "cnodex": {:git, "https://github.com/Overbryd/cnodex.git", "c1c4cde21295db07f87bb74006ab5f7222720db9", []},
+  "deep_merge": {:hex, :deep_merge, "1.0.0", "b4aa1a0d1acac393bdf38b2291af38cb1d4a52806cf7a4906f718e1feb5ee961", [:mix], [], "hexpm"},
   "earmark": {:hex, :earmark, "1.2.3", "206eb2e2ac1a794aa5256f3982de7a76bf4579ff91cb28d0e17ea2c9491e46a4", [:mix], [], "hexpm"},
   "ex_doc": {:hex, :ex_doc, "0.16.3", "cd2a4cfe5d26e37502d3ec776702c72efa1adfa24ed9ce723bb565f4c30bd31a", [:mix], [{:earmark, "~> 1.1", [hex: :earmark, repo: "hexpm", optional: false]}], "hexpm"},
   "myhtml": {:git, "https://github.com/lexborisov/myhtml.git", "fe2cf577570666d058a2b7167c26d3384a758e19", [branch: "master"]},
