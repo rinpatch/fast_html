@@ -1,4 +1,4 @@
-defmodule Myhtmlex do
+defmodule :fast_html do
   @moduledoc """
   A module to decode html into a tree structure.
 
@@ -7,7 +7,7 @@ defmodule Myhtmlex do
 
   ## Example
 
-      iex> Myhtmlex.decode("<h1>Hello world</h1>")
+      iex> :fast_html.decode("<h1>Hello world</h1>")
       {"html", [], [{"head", [], []}, {"body", [], [{"h1", [], ["Hello world"]}]}]}
 
   Benchmark results (removed Nif calling mode) on various file sizes on a 2,5Ghz Core i7:
@@ -46,18 +46,18 @@ defmodule Myhtmlex do
 
   ## Examples
 
-      iex> Myhtmlex.decode("<h1>Hello world</h1>")
+      iex> :fast_html.decode("<h1>Hello world</h1>")
       {"html", [], [{"head", [], []}, {"body", [], [{"h1", [], ["Hello world"]}]}]}
 
-      iex> Myhtmlex.decode("<span class='hello'>Hi there</span>")
+      iex> :fast_html.decode("<span class='hello'>Hi there</span>")
       {"html", [],
        [{"head", [], []},
         {"body", [], [{"span", [{"class", "hello"}], ["Hi there"]}]}]}
 
-      iex> Myhtmlex.decode("<body><!-- a comment --!></body>")
+      iex> :fast_html.decode("<body><!-- a comment --!></body>")
       {"html", [], [{"head", [], []}, {"body", [], [comment: " a comment "]}]}
 
-      iex> Myhtmlex.decode("<br>")
+      iex> :fast_html.decode("<br>")
       {"html", [], [{"head", [], []}, {"body", [], [{"br", [], []}]}]}
   """
   @spec decode(String.t()) :: tree()
@@ -78,17 +78,17 @@ defmodule Myhtmlex do
 
   ## Examples
 
-      iex> Myhtmlex.decode("<h1>Hello world</h1>", format: [:html_atoms])
+      iex> :fast_html.decode("<h1>Hello world</h1>", format: [:html_atoms])
       {:html, [], [{:head, [], []}, {:body, [], [{:h1, [], ["Hello world"]}]}]}
 
-      iex> Myhtmlex.decode("<br>", format: [:nil_self_closing])
+      iex> :fast_html.decode("<br>", format: [:nil_self_closing])
       {"html", [], [{"head", [], []}, {"body", [], [{"br", [], nil}]}]}
 
-      iex> Myhtmlex.decode("<body><!-- a comment --!></body>", format: [:comment_tuple3])
+      iex> :fast_html.decode("<body><!-- a comment --!></body>", format: [:comment_tuple3])
       {"html", [], [{"head", [], []}, {"body", [], [{:comment, [], " a comment "}]}]}
 
       iex> html = "<body><!-- a comment --!><unknown /></body>"
-      iex> Myhtmlex.decode(html, format: [:html_atoms, :nil_self_closing, :comment_tuple3])
+      iex> :fast_html.decode(html, format: [:html_atoms, :nil_self_closing, :comment_tuple3])
       {:html, [],
        [{:head, [], []},
         {:body, [], [{:comment, [], " a comment "}, {"unknown", [], nil}]}]}
