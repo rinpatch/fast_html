@@ -49,12 +49,9 @@ defmodule FastHTML.Mixfile do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Myhtmlex.Safe, []},
+      mod: {FastHtml.Application, []},
       # used to detect conflicts with other applications named processes
-      registered: [Myhtmlex.Safe.Cnode, Myhtmlex.Safe.Supervisor],
-      env: [
-        mode: Myhtmlex.Safe
-      ]
+      registered: [FastHtml.Cnode, FastHtml.Supervisor]
     ]
   end
 
