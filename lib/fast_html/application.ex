@@ -57,8 +57,8 @@ defmodule FastHtml.Application do
 
   defp start_epmd(path) do
     case System.cmd(path, ["-daemon"]) do
-      {_, 0} -> :ok
-      {_, exit_code} -> {:error, "Could not start epmd, exit code: #{exit_code}"}
+      {_result, 0} -> :ok
+      {_result, exit_code} -> {:error, "Could not start epmd, exit code: #{exit_code}"}
     end
   end
 
