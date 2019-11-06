@@ -3,30 +3,15 @@ defmodule FastHtml.Application do
 
   use Application
 
-  application = Mix.Project.config()[:app]
-
-  defp random_sname, do: :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
-
-  defp sname, do: :"myhtml_#{random_sname()}"
+  def random_sname, do: :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
 
   def start(_type, _args) do
-    import Supervisor.Spec
-
     case maybe_setup_node() do
       {:error, message} -> raise message
       _ -> :ok
     end
 
-    myhtml_worker = Path.join(:code.priv_dir(unquote(application)), "myhtml_worker")
-
-    children = [
-      worker(Nodex.Cnode, [
-        %{exec_path: myhtml_worker, sname: sname()},
-        [name: FastHtml.Cnode]
-      ])
-    ]
-
-    Supervisor.start_link(children, strategy: :one_for_one, name: FastHtml.Supervisor)
+    Supervisor.start_link([FastHtml.Cnode], strategy: :one_for_one, name: FastHtml.Supervisor)
   end
 
   defp maybe_setup_node() do

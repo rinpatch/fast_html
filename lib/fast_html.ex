@@ -96,7 +96,7 @@ defmodule :fast_html do
   """
   @spec decode(String.t(), format: [format_flag()]) :: tree()
   def decode(bin, format: flags) do
-    {:ok, {:myhtml_worker, res}} = Nodex.Cnode.call(FastHtml.Cnode, {:decode, bin, flags})
+    {:ok, res} = FastHtml.Cnode.call({:decode, bin, flags})
     res
   end
 end
