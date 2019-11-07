@@ -18,7 +18,7 @@ The following table provides median times it takes to decode a string to a tree 
 | fragment-large.html  | 1.50 ms            | 10.91 ms               | 6.03 ms              | 1.91 ms        |
 | fragment-small.html²  | 434.64 μs          | 83.02 μs               | 57.97 μs             | 311.39 μs      |
 
-1. Myhtmlex has a C-Node more as well, but it wasn't benchmarked here because it segfaults on `document-large.html`
+1. Myhtmlex has a C-Node mode as well, but it wasn't benchmarked here because it segfaults on `document-large.html`
 2. The slowdown on `fragment-small.html` is due to C-Node overhead. Unlike html5ever and Myhtmlex in NIF mode, `fast_html` has the parser process isolated and communicates with it over the network, so even if a fatal crash in the parser happens, it won't bring down the entire VM.
 ## Contribution / Bug Reports
 
