@@ -4,7 +4,7 @@ defmodule FastHTML.Mixfile do
   def project do
     [
       app: :fast_html,
-      version: "0.9.1",
+      version: "0.9.2",
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
@@ -66,7 +66,7 @@ defmodule FastHTML.Mixfile do
 
   defp docs do
     [
-      main: "FastHTML"
+      main: "fast_html"
     ]
   end
 end
