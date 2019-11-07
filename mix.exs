@@ -58,7 +58,7 @@ defmodule FastHTML.Mixfile do
   defp deps do
     [
       # documentation helpers
-      {:ex_doc, ">= 0.0.0", only: :dev},
+      {:ex_doc, "~> 0.19", only: :dev},
       # benchmarking helpers
       {:benchee, "~> 1.0", only: :dev}
     ]
