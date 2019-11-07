@@ -1,9 +1,6 @@
 defmodule :fast_html do
   @moduledoc """
   A module to decode html into a tree structure.
-
-  Based on [Alexander Borisov's myhtml](https://github.com/lexborisov/myhtml),
-  this binding gains the properties of being html-spec compliant and very fast.
   """
 
   @type tag() :: String.t() | atom()
