@@ -16,7 +16,10 @@ defmodule Mix.Tasks.FastHtml.Bench do
 
     Benchee.run(
       %{
-        "Decoding" => fn input -> :fast_html.decode(input) end
+        "fast_html" => fn input -> :fast_html.decode(input) end,
+        "myhtmlex nif" => fn input -> Myhtmlex.Nif.decode(input) end,
+        "html5ever nif" => fn input -> Html5ever.parse(input) end,
+        "mochiweb_html" => fn input -> :mochiweb_html.parse(input) end
       },
       inputs: inputs,
       save: [path: "fast_html.bench"],

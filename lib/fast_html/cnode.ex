@@ -1,5 +1,14 @@
 defmodule FastHtml.Cnode do
-  @moduledoc false
+  @moduledoc """
+  Manages myhtml c-node.
+
+  ## Configuration
+  ```elixir
+     config :fast_html, :cnode,
+       sname: "myhtml_worker", # Defaults to myhtml_<random bytes>
+       spawn_inactive_timeout: 5000 # Defaults to 10000
+  ```
+  """
 
   @spawn_inactive_timeout 10000
 
@@ -8,25 +17,20 @@ defmodule FastHtml.Cnode do
   use GenServer
   require Logger
 
+  @doc false
   def start_link(args) do
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 
+  @doc false
   def init(args) do
-    args =
-      if args == [] do
-        %{}
-      else
-        args
-      end
-
     exec_path = Path.join(:code.priv_dir(unquote(application)), "myhtml_worker")
 
-    sname = Map.get_lazy(args, :sname, &default_sname/0)
-    hostname = Map.get_lazy(args, :hostname, &master_hostname/0)
+    sname = Keyword.get_lazy(args, :sname, &default_sname/0)
+    hostname = master_hostname()
     addr = :"#{sname}@#{hostname}"
 
-    spawn_inactive_timeout = Map.get(args, :spawn_inactive_timeout, @spawn_inactive_timeout)
+    spawn_inactive_timeout = Keyword.get(args, :spawn_inactive_timeout, @spawn_inactive_timeout)
 
     state = %{
       exec_path: exec_path,
@@ -106,24 +110,29 @@ defmodule FastHtml.Cnode do
     end
   end
 
+  @doc false
   def handle_info({:nodedown, _cnode}, state) do
     {:stop, :nodedown, state}
   end
 
+  @doc false
   def handle_info(msg, state) do
     Logger.warn("unhandled handle_info: #{inspect(msg)}")
     {:noreply, state}
   end
 
+  @doc false
   def handle_call(:addr, _from, %{addr: addr} = state) do
     {:reply, addr, state}
   end
 
+  @doc false
   def terminate(_reason, %{pid: pid}) when pid != nil do
     System.cmd("kill", ["-9", to_string(pid)])
     :normal
   end
 
+  @doc "Call into myhtml cnode"
   def call(msg, timeout \\ 10000) do
     node = GenServer.call(__MODULE__, :addr)
     send({nil, node}, msg)

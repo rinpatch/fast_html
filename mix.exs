@@ -1,17 +1,17 @@
-defmodule FastHTML.Mixfile do
+defmodule FastHtml.Mixfile do
   use Mix.Project
 
   def project do
     [
       app: :fast_html,
-      version: "0.9.2",
+      version: "0.99.0",
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
       compilers: [:fast_html_cnode_make] ++ Mix.compilers(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
-      name: "FastHTML",
+      name: "FastHtml",
       description: """
         A module to decode HTML into a tree,
         porting all properties of the underlying
@@ -26,7 +26,7 @@ defmodule FastHTML.Mixfile do
 
   def package do
     [
-      maintainers: ["Ariadne Conill"],
+      maintainers: ["Ariadne Conill", "rinpatch"],
       licenses: ["GNU LGPL"],
       links: %{
         "GitLab" => "https://git.pleroma.social/pleroma/fast_html",
@@ -60,13 +60,17 @@ defmodule FastHTML.Mixfile do
       # documentation helpers
       {:ex_doc, "~> 0.19", only: :dev},
       # benchmarking helpers
-      {:benchee, "~> 1.0", only: :dev}
+      {:benchee, "~> 1.0", only: :dev},
+      {:myhtmlex, "~> 0.2.0", only: :dev, runtime: false},
+      {:mochiweb, "~> 2.18", only: :dev},
+      {:html5ever, "~> 0.7.0", only: :dev}
     ]
   end
 
   defp docs do
     [
-      main: "fast_html"
+      main: "readme",
+      extras: ["README.md"]
     ]
   end
 end
@@ -127,7 +131,7 @@ defmodule Mix.Tasks.Compile.FastHtmlCnodeMake do
       {:error,
        [
          %Mix.Task.Compiler.Diagnostic{
-           compiler_name: "FastHTML Cnode",
+           compiler_name: "FastHtml Cnode",
            message: "Make exited with #{exit_code}",
            severity: :error,
            file: nil,
