@@ -1,4 +1,4 @@
-defmodule FastHTML.Mixfile do
+defmodule FastHtml.Mixfile do
   use Mix.Project
 
   def project do
@@ -11,7 +11,7 @@ defmodule FastHTML.Mixfile do
       compilers: [:fast_html_cnode_make] ++ Mix.compilers(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
-      name: "FastHTML",
+      name: "FastHtml",
       description: """
         A module to decode HTML into a tree,
         porting all properties of the underlying
@@ -127,7 +127,7 @@ defmodule Mix.Tasks.Compile.FastHtmlCnodeMake do
       {:error,
        [
          %Mix.Task.Compiler.Diagnostic{
-           compiler_name: "FastHTML Cnode",
+           compiler_name: "FastHtml Cnode",
            message: "Make exited with #{exit_code}",
            severity: :error,
            file: nil,
