@@ -11,7 +11,10 @@ defmodule FastHtml.Application do
       _ -> :ok
     end
 
-    Supervisor.start_link([FastHtml.Cnode], strategy: :one_for_one, name: FastHtml.Supervisor)
+    Supervisor.start_link([{FastHtml.Cnode, Application.get_env(:fast_html, :cnode, [])}],
+      strategy: :one_for_one,
+      name: FastHtml.Supervisor
+    )
   end
 
   defp maybe_setup_node() do

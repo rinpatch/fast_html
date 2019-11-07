@@ -8,7 +8,7 @@ defmodule :fast_html do
   ## Example
 
       iex> :fast_html.decode("<h1>Hello world</h1>")
-      {"html", [], [{"head", [], []}, {"body", [], [{"h1", [], ["Hello world"]}]}]}
+      {:ok, {"html", [], [{"head", [], []}, {"body", [], [{"h1", [], ["Hello world"]}]}]}}
 
   Benchmark results (removed Nif calling mode) on various file sizes on a 2,5Ghz Core i7:
 
@@ -47,20 +47,20 @@ defmodule :fast_html do
   ## Examples
 
       iex> :fast_html.decode("<h1>Hello world</h1>")
-      {"html", [], [{"head", [], []}, {"body", [], [{"h1", [], ["Hello world"]}]}]}
+      {:ok, {"html", [], [{"head", [], []}, {"body", [], [{"h1", [], ["Hello world"]}]}]}}
 
       iex> :fast_html.decode("<span class='hello'>Hi there</span>")
-      {"html", [],
+      {:ok, {"html", [],
        [{"head", [], []},
-        {"body", [], [{"span", [{"class", "hello"}], ["Hi there"]}]}]}
+        {"body", [], [{"span", [{"class", "hello"}], ["Hi there"]}]}]}}
 
       iex> :fast_html.decode("<body><!-- a comment --!></body>")
-      {"html", [], [{"head", [], []}, {"body", [], [comment: " a comment "]}]}
+      {:ok, {"html", [], [{"head", [], []}, {"body", [], [comment: " a comment "]}]}}
 
       iex> :fast_html.decode("<br>")
-      {"html", [], [{"head", [], []}, {"body", [], [{"br", [], []}]}]}
+      {:ok, {"html", [], [{"head", [], []}, {"body", [], [{"br", [], []}]}]}}
   """
-  @spec decode(String.t()) :: tree()
+  @spec decode(String.t()) :: {:ok, tree()} | {:error, String.t() | atom()}
   def decode(bin) do
     decode(bin, format: [])
   end
@@ -79,24 +79,24 @@ defmodule :fast_html do
   ## Examples
 
       iex> :fast_html.decode("<h1>Hello world</h1>", format: [:html_atoms])
-      {:html, [], [{:head, [], []}, {:body, [], [{:h1, [], ["Hello world"]}]}]}
+      {:ok, {:html, [], [{:head, [], []}, {:body, [], [{:h1, [], ["Hello world"]}]}]}}
 
       iex> :fast_html.decode("<br>", format: [:nil_self_closing])
-      {"html", [], [{"head", [], []}, {"body", [], [{"br", [], nil}]}]}
+      {:ok, {"html", [], [{"head", [], []}, {"body", [], [{"br", [], nil}]}]}}
 
       iex> :fast_html.decode("<body><!-- a comment --!></body>", format: [:comment_tuple3])
-      {"html", [], [{"head", [], []}, {"body", [], [{:comment, [], " a comment "}]}]}
+      {:ok, {"html", [], [{"head", [], []}, {"body", [], [{:comment, [], " a comment "}]}]}}
 
       iex> html = "<body><!-- a comment --!><unknown /></body>"
       iex> :fast_html.decode(html, format: [:html_atoms, :nil_self_closing, :comment_tuple3])
-      {:html, [],
+      {:ok, {:html, [],
        [{:head, [], []},
-        {:body, [], [{:comment, [], " a comment "}, {"unknown", [], nil}]}]}
+        {:body, [], [{:comment, [], " a comment "}, {"unknown", [], nil}]}]}}
 
   """
-  @spec decode(String.t(), format: [format_flag()]) :: tree()
+  @spec decode(String.t(), format: [format_flag()]) ::
+          {:ok, tree()} | {:error, String.t() | atom()}
   def decode(bin, format: flags) do
-    {:ok, res} = FastHtml.Cnode.call({:decode, bin, flags})
-    res
+    FastHtml.Cnode.call({:decode, bin, flags})
   end
 end
