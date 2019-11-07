@@ -26,7 +26,7 @@ defmodule FastHTML.Mixfile do
 
   def package do
     [
-      maintainers: ["Ariadne Conill"],
+      maintainers: ["Ariadne Conill", "rinpatch"],
       licenses: ["GNU LGPL"],
       links: %{
         "GitLab" => "https://git.pleroma.social/pleroma/fast_html",
