@@ -44,10 +44,10 @@ defmodule FastHtml.Mixfile do
           "LICENSE"
         ] ++
           Enum.reject(
-            Path.wildcard("c_src/**/*.*"),
+            Path.wildcard("c_src/**/*"),
             fn path ->
               Path.extname(path) in [".so", ".a", ".o"] or
-                String.starts_with?(Path.basename(path), ".")
+                String.starts_with?(Path.basename(path), ".") or File.dir?(path)
             end
           )
     ]
