@@ -60,10 +60,10 @@ defmodule FastHtml.Mixfile do
       # documentation helpers
       {:ex_doc, "~> 0.19", only: :dev},
       # benchmarking helpers
-      {:benchee, "~> 1.0", only: :dev},
-      {:myhtmlex, "~> 0.2.0", only: :dev, runtime: false},
-      {:mochiweb, "~> 2.18", only: :dev},
-      {:html5ever, "~> 0.7.0", only: :dev}
+      {:benchee, "~> 1.0", only: :dev, optional: true},
+      {:myhtmlex, "~> 0.2.0", only: :dev, runtime: false, optional: true},
+      {:mochiweb, "~> 2.18", only: :dev, optional: true},
+      {:html5ever, "~> 0.7.0", only: :dev, optional: true}
     ]
   end
 
