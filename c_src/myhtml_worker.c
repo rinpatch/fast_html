@@ -11,6 +11,10 @@
 #include <errno.h>
 #include <ctype.h>
 
+#ifndef _REENTRANT
+#define _REENTRANT /* For some reason __erl_errno is undefined unless _REENTRANT is defined */
+#endif
+
 #include "ei.h"
 #ifndef OTP_22_OR_NEWER
 # include "erl_interface.h"
