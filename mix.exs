@@ -4,7 +4,7 @@ defmodule FastHtml.Mixfile do
   def project do
     [
       app: :fast_html,
-      version: "0.99.0",
+      version: "0.99.1",
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
@@ -33,16 +33,23 @@ defmodule FastHtml.Mixfile do
         "Issues" => "https://git.pleroma.social/pleroma/fast_html/issues",
         "MyHTML" => "https://github.com/lexborisov/myhtml"
       },
-      files: [
-        "lib",
-        "c_src",
-        "priv/.gitignore",
-        "test",
-        "Makefile",
-        "mix.exs",
-        "README.md",
-        "LICENSE"
-      ]
+      files:
+        [
+          "lib",
+          "priv/.gitignore",
+          "test",
+          "Makefile",
+          "mix.exs",
+          "README.md",
+          "LICENSE"
+        ] ++
+          Enum.reject(
+            Path.wildcard("c_src/**/*.*"),
+            fn path ->
+              Path.extname(path) in [".so", ".a", ".o"] or
+                String.starts_with?(Path.basename(path), ".")
+            end
+          )
     ]
   end
 
