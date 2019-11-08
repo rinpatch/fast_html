@@ -4,7 +4,7 @@ defmodule FastHtml.Mixfile do
   def project do
     [
       app: :fast_html,
-      version: "0.99.1",
+      version: "0.99.2",
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
