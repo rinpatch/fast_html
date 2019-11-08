@@ -4,7 +4,7 @@ defmodule FastHtml.Mixfile do
   def project do
     [
       app: :fast_html,
-      version: "0.99.2",
+      version: "0.99.3",
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
@@ -67,10 +67,10 @@ defmodule FastHtml.Mixfile do
       # documentation helpers
       {:ex_doc, "~> 0.19", only: :dev},
       # benchmarking helpers
-      {:benchee, "~> 1.0", only: :dev, optional: true},
-      {:myhtmlex, "~> 0.2.0", only: :dev, runtime: false, optional: true},
-      {:mochiweb, "~> 2.18", only: :dev, optional: true},
-      {:html5ever, "~> 0.7.0", only: :dev, optional: true}
+      {:benchee, "~> 1.0", only: :bench, optional: true},
+      {:myhtmlex, "~> 0.2.0", only: :bench, runtime: false, optional: true},
+      {:mochiweb, "~> 2.18", only: :bench, optional: true},
+      {:html5ever, "~> 0.7.0", only: :bench, optional: true}
     ]
   end
 
