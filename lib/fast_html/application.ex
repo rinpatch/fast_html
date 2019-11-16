@@ -50,19 +50,7 @@ defmodule FastHtml.Application do
     end
   end
 
-  defp hostname() do
-    {:ok, ifaddrs} = :inet.getifaddrs()
-
-    ifaddrs
-    |> Enum.filter(fn {_name, value} -> :loopback in Keyword.get(value, :flags) end)
-    |> Enum.at(0)
-    |> elem(1)
-    |> Keyword.get(:addr)
-    |> :inet.ntoa()
-    |> to_string()
-  end
-
   defp start_node() do
-    Node.start(:"master_#{random_sname()}@#{hostname()}")
+    Node.start(:"master_#{random_sname()}@127.0.0.1")
   end
 end
