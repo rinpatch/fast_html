@@ -57,7 +57,7 @@ static void err_term(ei_x_buff * response, const char * error_atom);
 static parse_flags_t decode_parse_flags(state_t * state, int arity);
 static void decode(state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, parse_flags_t parse_flags);
 
-static void build_tree(ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_node_t * node, parse_flags_t parse_flags);
+static void build_tree(ei_x_buff * response, myhtml_tree_t * tree, parse_flags_t parse_flags);
 static void prepare_node_attrs(ei_x_buff * response, myhtml_tree_node_t * node);
 
 static inline char * lowercase(char * c);
@@ -298,8 +298,7 @@ static void decode (state_t * state, ei_x_buff * response, const char * bin_data
   }
 
   // build tree
-  myhtml_tree_node_t * root = myhtml_tree_get_document (tree);
-  build_tree (response, tree, root->child, parse_flags);
+  build_tree (response, tree, parse_flags);
   myhtml_tree_destroy (tree);
 }
 
@@ -389,12 +388,15 @@ static void prepare_comment (ei_x_buff * response, const char * node_comment, si
 
 #endif
 
-static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_node_t * node, parse_flags_t parse_flags)
+static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, parse_flags_t parse_flags)
 {
-  myhtml_tree_node_t * current_node = node;
+  myhtml_tree_node_t * node = myhtml_tree_get_document (tree);
 
   tstack stack;
   tstack_init (&stack, 30);
+  tstack_push (&stack, node);
+
+  myhtml_tree_node_t * current_node = node->child;
 
   // ok we're going to send an actual response so start encoding it
   response->index = 0;
@@ -411,7 +413,6 @@ static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_
     {
       size_t text_len;
       const char * node_text = myhtml_node_text (current_node, &text_len);
-
       EMIT_LIST_HDR;
       ei_x_encode_binary (response, node_text, text_len);
     }
@@ -453,11 +454,7 @@ static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, myhtml_tree_
         strncpy (tag_string, tag_name, sizeof buffer - 1);
       }
 
-      if (stack.used > 0)
-      {
-        EMIT_LIST_HDR;
-      }
-
+      EMIT_LIST_HDR;
       prepare_tag_header (response, tag_string, current_node, parse_flags);
 
       if (current_node->child)

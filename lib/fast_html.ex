@@ -32,36 +32,36 @@ defmodule :fast_html do
 
   ## Examples
       iex> :fast_html.decode("<h1>Hello world</h1>")
-      {:ok, {"html", [], [{"head", [], []}, {"body", [], [{"h1", [], ["Hello world"]}]}]}}
+      {:ok, [{"html", [], [{"head", [], []}, {"body", [], [{"h1", [], ["Hello world"]}]}]}]}
 
       iex> :fast_html.decode("Hello world", timeout: 0)
       {:error, :timeout}
 
       iex> :fast_html.decode("<span class='hello'>Hi there</span>")
-      {:ok, {"html", [],
+      {:ok, [{"html", [],
        [{"head", [], []},
-        {"body", [], [{"span", [{"class", "hello"}], ["Hi there"]}]}]}}
+        {"body", [], [{"span", [{"class", "hello"}], ["Hi there"]}]}]}]}
 
       iex> :fast_html.decode("<body><!-- a comment --!></body>")
-      {:ok, {"html", [], [{"head", [], []}, {"body", [], [comment: " a comment "]}]}}
+      {:ok, [{"html", [], [{"head", [], []}, {"body", [], [comment: " a comment "]}]}]}
 
       iex> :fast_html.decode("<br>")
-      {:ok, {"html", [], [{"head", [], []}, {"body", [], [{"br", [], []}]}]}}
+      {:ok, [{"html", [], [{"head", [], []}, {"body", [], [{"br", [], []}]}]}]}
 
       iex> :fast_html.decode("<h1>Hello world</h1>", format: [:html_atoms])
-      {:ok, {:html, [], [{:head, [], []}, {:body, [], [{:h1, [], ["Hello world"]}]}]}}
+      {:ok, [{:html, [], [{:head, [], []}, {:body, [], [{:h1, [], ["Hello world"]}]}]}]}
 
       iex> :fast_html.decode("<br>", format: [:nil_self_closing])
-      {:ok, {"html", [], [{"head", [], []}, {"body", [], [{"br", [], nil}]}]}}
+      {:ok, [{"html", [], [{"head", [], []}, {"body", [], [{"br", [], nil}]}]}]}
 
       iex> :fast_html.decode("<body><!-- a comment --!></body>", format: [:comment_tuple3])
-      {:ok, {"html", [], [{"head", [], []}, {"body", [], [{:comment, [], " a comment "}]}]}}
+      {:ok, [{"html", [], [{"head", [], []}, {"body", [], [{:comment, [], " a comment "}]}]}]}
 
       iex> html = "<body><!-- a comment --!><unknown /></body>"
       iex> :fast_html.decode(html, format: [:html_atoms, :nil_self_closing, :comment_tuple3])
-      {:ok, {:html, [],
+      {:ok, [{:html, [],
        [{:head, [], []},
-        {:body, [], [{:comment, [], " a comment "}, {"unknown", [], nil}]}]}}
+        {:body, [], [{:comment, [], " a comment "}, {"unknown", [], nil}]}]}]}
 
   """
   @spec decode(String.t(), format: [format_flag()]) ::
