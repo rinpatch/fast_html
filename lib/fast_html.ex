@@ -71,4 +71,26 @@ defmodule :fast_html do
     timeout = Keyword.get(opts, :timeout, 10000)
     FastHtml.Cnode.call({:decode, bin, flags}, timeout)
   end
+
+  @doc """
+  Like `decode/2`, but for parsing [HTML fragments](https://html.spec.whatwg.org/multipage/parsing.html#parsing-html-fragments).
+
+  `opts` is a keyword list of options, the options available are the same as in `decode/2` with addition of:
+  * `context` - Name of the context element, defaults to `div`
+  * `format` - Format flags for the tree
+
+  Example:
+      iex> :fast_html.decode_fragment("rin is the <i>best</i> girl")
+      {:ok, [{"html", [], ["rin is the ", {"i", [], ["best"]}, " girl"]}]}
+      iex> :fast_html.decode_fragment("rin is the <i>best</i> girl", context: "title")
+      {:ok, [{"html", [], ["rin is the <i>best</i> girl"]}]}
+      iex> :fast_html.decode_fragment("rin is the <i>best</i> girl", context: "objective_truth")
+      {:error, :unknown_context_tag}
+  """
+  def decode_fragment(bin, opts \\ []) do
+    flags = Keyword.get(opts, :format, [])
+    timeout = Keyword.get(opts, :timeout, 10000)
+    context = Keyword.get(opts, :context, "div")
+    FastHtml.Cnode.call({:decode_fragment, bin, flags, context}, timeout)
+  end
 end

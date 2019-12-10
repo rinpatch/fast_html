@@ -138,7 +138,7 @@ defmodule FastHtml.Cnode do
     send({nil, node}, msg)
 
     receive do
-      {:myhtml_worker, res} -> {:ok, res}
+      {:myhtml_worker, res} -> res
     after
       timeout -> {:error, :timeout}
     end
