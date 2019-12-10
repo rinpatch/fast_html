@@ -177,10 +177,12 @@ static void handle_emsg (state_t * state, erlang_msg * emsg)
 }
 
 // handle ERL_SEND message type.
-// we expect a tuple with arity of 3 in state->buffer.
-// we expect the first argument to be an atom (`decode`),
+// we expect a tuple with arity of 3 or 4 in state->buffer.
+// we expect the first argument to be an atom (`decode` or `decode_fragment`),
 // the second argument to be the HTML payload, and the
 // third argument to be the argument list.
+// In case of `decode_fragment`, the fourth argument should be
+// the context tag name.
 // any other message: respond with an {error, unknown_call} tuple.
 static void handle_send (state_t * state, erlang_msg * emsg)
 {
