@@ -20,6 +20,15 @@ The following table provides median times it takes to decode a string to a tree 
 
 1. Myhtmlex has a C-Node mode as well, but it wasn't benchmarked here because it segfaults on `document-large.html`
 2. The slowdown on `fragment-small.html` is due to C-Node overhead. Unlike html5ever and Myhtmlex in NIF mode, `fast_html` has the parser process isolated and communicates with it over the network, so even if a fatal crash in the parser happens, it won't bring down the entire VM.
+
+## Note about running with [Swarm](https://github.com/bitwalker/swarm)
+
+Since the myhtml worker runs as a separate node, Swarm will try to sync with it. Of course it will fail since it's not a real Erlang node. To prevent it from doing that, you can add the following to your configuration:
+
+```elixir
+config :swarm, node_blacklist: [~r/myhtml_.*$/]
+```
+
 ## Contribution / Bug Reports
 
 * Please make sure you do `git submodule update` after a checkout/pull
