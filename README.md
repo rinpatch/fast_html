@@ -3,7 +3,7 @@
 A C Node wrapping lexborisov's [myhtml](https://github.com/lexborisov/myhtml).
 Primarily used with [FastSanitize](https://git.pleroma.social/pleroma/fast_sanitize).
 
-* Available as a hex package: `{:fast_html, "~> 0.99"}`
+* Available as a hex package: `{:fast_html, "~> 1.0"}`
 * [Documentation](https://hexdocs.pm/fast_html/fast_html.html)
 
 ## Benchmarks
