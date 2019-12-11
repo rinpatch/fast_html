@@ -204,7 +204,6 @@ static void handle_send (state_t * state, erlang_msg * emsg)
     goto out;
   }
 
-  // the tuple should begin with a `decode` atom.
   char atom[MAXATOMLEN];
   if (ei_decode_atom (state->buffer.buff, &state->buffer.index, atom) < 0)
   {
@@ -251,6 +250,11 @@ static void handle_send (state_t * state, erlang_msg * emsg)
     panic ("failed to decode options list header in message");
 
   parse_flags_t parse_flags = decode_parse_flags (state, arity);
+
+  // Lists with items always have an empty list as their tail
+  if (arity != 0)
+    if (ei_decode_list_header (state->buffer.buff, &state->buffer.index, &arity) < 0)
+      panic ("failed to decode empty list header after option list in message");
 
   // if we are parsing a fragment, context tag name should come next
   myhtml_tag_id_t context_tag_id = 0;

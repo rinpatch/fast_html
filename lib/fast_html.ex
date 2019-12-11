@@ -86,6 +86,8 @@ defmodule :fast_html do
       {:ok, [{"html", [], ["rin is the <i>best</i> girl"]}]}
       iex> :fast_html.decode_fragment("rin is the <i>best</i> girl", context: "objective_truth")
       {:error, :unknown_context_tag}
+      iex> :fast_html.decode_fragment("rin is the <i>best</i> girl", format: [:html_atoms])
+      {:ok, [{:html, [], ["rin is the ", {:i, [], ["best"]}, " girl"]}]}
   """
   def decode_fragment(bin, opts \\ []) do
     flags = Keyword.get(opts, :format, [])
