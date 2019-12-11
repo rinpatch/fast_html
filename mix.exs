@@ -29,8 +29,8 @@ defmodule FastHtml.Mixfile do
       maintainers: ["Ariadne Conill", "rinpatch"],
       licenses: ["GNU LGPL"],
       links: %{
-        "GitLab" => "https://git.pleroma.social/pleroma/fast_html",
-        "Issues" => "https://git.pleroma.social/pleroma/fast_html/issues",
+        "GitLab" => "https://git.pleroma.social/pleroma/elixir-libraries/fast_html/",
+        "Issues" => "https://git.pleroma.social/pleroma/elixir-libraries/fast_html/issues",
         "MyHTML" => "https://github.com/lexborisov/myhtml"
       },
       files:
