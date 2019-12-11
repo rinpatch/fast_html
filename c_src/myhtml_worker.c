@@ -55,7 +55,7 @@ static void handle_emsg(state_t * state, erlang_msg * emsg);
 static void handle_send(state_t * state, erlang_msg * emsg);
 static void err_term(ei_x_buff * response, const char * error_atom);
 static parse_flags_t decode_parse_flags(state_t * state, int arity);
-static void decode(state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, parse_flags_t parse_flags);
+static void decode(state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, parse_flags_t parse_flags, bool fragment, myhtml_tag_id_t context_tag_id);
 
 static void build_tree(ei_x_buff * response, myhtml_tree_t * tree, parse_flags_t parse_flags);
 static void prepare_node_attrs(ei_x_buff * response, myhtml_tree_node_t * node);
@@ -177,10 +177,12 @@ static void handle_emsg (state_t * state, erlang_msg * emsg)
 }
 
 // handle ERL_SEND message type.
-// we expect a tuple with arity of 3 in state->buffer.
-// we expect the first argument to be an atom (`decode`),
+// we expect a tuple with arity of 3 or 4 in state->buffer.
+// we expect the first argument to be an atom (`decode` or `decode_fragment`),
 // the second argument to be the HTML payload, and the
 // third argument to be the argument list.
+// In case of `decode_fragment`, the fourth argument should be
+// the context tag name.
 // any other message: respond with an {error, unknown_call} tuple.
 static void handle_send (state_t * state, erlang_msg * emsg)
 {
@@ -194,9 +196,9 @@ static void handle_send (state_t * state, erlang_msg * emsg)
   if (ei_decode_version (state->buffer.buff, &state->buffer.index, &version) < 0)
     panic ("malformed message - bad version (%d).", version);
 
-  // decode the tuple header, make sure we have an arity of 3.
+  // decode the tuple header
   int arity;
-  if (ei_decode_tuple_header (state->buffer.buff, &state->buffer.index, &arity) < 0 || arity != 3)
+  if (ei_decode_tuple_header (state->buffer.buff, &state->buffer.index, &arity) < 0)
   {
     err_term (&response, "badmatch");
     goto out;
@@ -210,9 +212,20 @@ static void handle_send (state_t * state, erlang_msg * emsg)
     goto out;
   }
 
+  bool fragment = false;
   if (strcmp (atom, "decode"))
   {
-    err_term (&response, "unknown_call");
+    if (strcmp (atom, "decode_fragment")) {
+      err_term (&response, "unknown_call");
+      goto out;
+    } else if (arity != 4) {
+      err_term (&response, "badmatch");
+      goto out;
+    } else {
+      fragment = true;
+    }
+  } else if (arity != 3) {
+    err_term (&response, "badmatch");
     goto out;
   }
 
@@ -238,7 +251,38 @@ static void handle_send (state_t * state, erlang_msg * emsg)
     panic ("failed to decode options list header in message");
 
   parse_flags_t parse_flags = decode_parse_flags (state, arity);
-  decode (state, &response, bin_data, bin_size, parse_flags);
+
+  // if we are parsing a fragment, context tag name should come next
+  myhtml_tag_id_t context_tag_id = 0;
+  if (fragment) {
+    int context_bin_type, context_bin_size;
+    if (ei_get_type (state->buffer.buff, &state->buffer.index, &context_bin_type, &context_bin_size) < 0)
+      panic ("failed to decode binary size in message");
+
+    // verify the type
+    if (context_bin_type != ERL_BINARY_EXT)
+    {
+      err_term (&response, "badmatch");
+      goto out;
+    }
+
+    // decode the binary
+    char * context_bin_data = calloc (1, context_bin_size + 1);
+    if (ei_decode_binary (state->buffer.buff, &state->buffer.index, context_bin_data, NULL) < 0)
+      panic ("failed to decode binary in message");
+
+    const myhtml_tag_context_t * context_tag_context = myhtml_tag_static_search(context_bin_data, context_bin_size);
+
+    free (context_bin_data);
+
+    if (context_tag_context == NULL) {
+      err_term (&response, "unknown_context_tag");
+      goto out;
+    } else {
+      context_tag_id = context_tag_context->id;
+    }
+  }
+  decode (state, &response, bin_data, bin_size, parse_flags, fragment, context_tag_id);
 
   free (bin_data);
 
@@ -256,6 +300,8 @@ static void err_term (ei_x_buff * response, const char * error_atom)
 {
   response->index = 0;
   ei_x_encode_version (response);
+  ei_x_encode_tuple_header(response, 2);
+  ei_x_encode_atom(response, "myhtml_worker");
   ei_x_encode_tuple_header (response, 2);
   ei_x_encode_atom (response, "error");
   ei_x_encode_atom (response, error_atom);
@@ -283,14 +329,20 @@ static parse_flags_t decode_parse_flags (state_t * state, int arity)
   return parse_flags;
 }
 
-static void decode (state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, parse_flags_t parse_flags)
+static void decode (state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, parse_flags_t parse_flags, bool fragment, myhtml_tag_id_t context_tag_id)
 {
   myhtml_tree_t * tree = myhtml_tree_create ();
   myhtml_tree_init (tree, state->myhtml);
   myhtml_tree_parse_flags_set (tree, MyHTML_TREE_PARSE_FLAGS_WITHOUT_DOCTYPE_IN_TREE);
 
   // parse tree
-  mystatus_t status = myhtml_parse (tree, MyENCODING_UTF_8, bin_data, bin_size);
+  mystatus_t status;
+  if (fragment) {
+    status = myhtml_parse_fragment(tree, MyENCODING_UTF_8, bin_data, bin_size, context_tag_id, 0);
+  } else {
+    status = myhtml_parse (tree, MyENCODING_UTF_8, bin_data, bin_size);
+  }
+
   if (status != MyHTML_STATUS_OK)
   {
     err_term (response, "myhtml_parse_failed");
@@ -403,6 +455,8 @@ static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, parse_flags_
   ei_x_encode_version (response);
   ei_x_encode_tuple_header(response, 2);
   ei_x_encode_atom(response, "myhtml_worker");
+  ei_x_encode_tuple_header(response, 2);
+  ei_x_encode_atom(response, "ok");
 
   while (current_node != NULL)
   {
