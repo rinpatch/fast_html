@@ -88,7 +88,7 @@ defmodule :fast_html_test do
                  {:head, [], []},
                  {:body, [],
                   [
-                    {:button, [{"disabled", "disabled"}, {"class", "foo garble"}], []}
+                    {:button, [{"disabled", ""}, {"class", "foo garble"}], []}
                   ]}
                ]}
             ]} =
@@ -119,7 +119,7 @@ defmodule :fast_html_test do
                  {:head, [], []},
                  {:body, [],
                   [
-                    {:a, [{"<", "<"}], [" asdf"]}
+                    {:a, [{"<", ""}], [" asdf"]}
                   ]}
                ]}
             ]} = :fast_html.decode(~s'<a <> asdf', format: [:html_atoms])
@@ -174,5 +174,10 @@ defmodule :fast_html_test do
   test "doesn't go into an infinite loop when there are more than one root tags" do
     assert {:ok, [{:comment, " a comment "}, {"html", [], [{"head", [], []}, {"body", [], []}]}]} ==
              :fast_html.decode("<!-- a comment --> <html> </html>")
+  end
+
+  test "doesn't return attribute name in attribute value when the latter is empty" do
+    assert :fast_html.decode_fragment("<meta content=\"\"/>") ==
+             {:ok, [{"html", [], [{"meta", [{"content", ""}], []}]}]}
   end
 end

@@ -398,10 +398,7 @@ static void prepare_node_attrs(ei_x_buff * response, myhtml_tree_node_t * node)
     ei_x_encode_tuple_header (response, 2);
     ei_x_encode_binary (response, attr_name, attr_name_len);
 
-    if (attr_value_len)
-      ei_x_encode_binary (response, attr_value, attr_value_len);
-    else
-      ei_x_encode_binary (response, attr_name, attr_name_len);
+    ei_x_encode_binary (response, attr_value, attr_value_len);
   }
 
   ei_x_encode_empty_list (response);
