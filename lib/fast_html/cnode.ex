@@ -57,6 +57,7 @@ defmodule FastHtml.Cnode do
   defp connect_cnode(%{addr: addr} = state) do
     if Node.connect(addr) do
       Logger.debug("connected to #{addr}")
+      Node.monitor(addr, true)
       {:ok, state}
     else
       Logger.debug("connecting to #{addr} failed")
