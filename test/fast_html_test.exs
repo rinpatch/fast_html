@@ -43,7 +43,7 @@ defmodule :fast_html_test do
                  {"body", [],
                   [
                     {"br", [], nil},
-                    {"esi:include", [], nil}
+                    {"esi:include", [], []}
                   ]}
                ]}
             ]} = :fast_html.decode("<br><esi:include />", format: [:nil_self_closing])
@@ -125,24 +125,6 @@ defmodule :fast_html_test do
             ]} = :fast_html.decode(~s'<a <> asdf', format: [:html_atoms])
   end
 
-  test "namespaced tags" do
-    assert {:ok,
-            [
-              {:html, [],
-               [
-                 {:head, [], []},
-                 {:body, [],
-                  [
-                    {"svg:svg", [],
-                     [
-                       {"svg:path", [], []},
-                       {"svg:a", [], []}
-                     ]}
-                  ]}
-               ]}
-            ]} = :fast_html.decode(~s'<svg><path></path><a></a></svg>', format: [:html_atoms])
-  end
-
   test "custom namespaced tags" do
     assert {:ok,
             [
@@ -151,7 +133,7 @@ defmodule :fast_html_test do
                  {:head, [], []},
                  {:body, [],
                   [
-                    {"esi:include", [], nil}
+                    {"esi:include", [], []}
                   ]}
                ]}
             ]} = :fast_html.decode(~s'<esi:include />', format: [:html_atoms, :nil_self_closing])
@@ -178,6 +160,6 @@ defmodule :fast_html_test do
 
   test "doesn't return attribute name in attribute value when the latter is empty" do
     assert :fast_html.decode_fragment("<meta content=\"\"/>") ==
-             {:ok, [{"html", [], [{"meta", [{"content", ""}], []}]}]}
+             {:ok, [{"meta", [{"content", ""}], []}]}
   end
 end
