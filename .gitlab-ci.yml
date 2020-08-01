@@ -1,4 +1,8 @@
-image: elixir:1.7
+# Needed because open_port's typespec is incorrect
+# in earlier versions, see
+# https://github.com/erlang/otp/commit/b9051f0f94c3d9f56f9d8d9b9c316446db7fd7a9
+# and there are no upstream Elixir docker images with OTP 23
+image: erlang:23-alpine
 
 variables:
   MIX_ENV: test
@@ -15,6 +19,7 @@ stages:
   - publish
 
 before_script:
+  - apk add elixir build-base cmake
   - mix local.hex --force
   - mix local.rebar --force
   - mix deps.get --only test
@@ -30,3 +35,8 @@ unit-testing:
   coverage: '/(\d+\.\d+\%) \| Total/'
   script:
     - mix test --trace --preload-modules --cover
+
+dialyzer:
+  stage: test
+  script:
+  - mix dialyzer

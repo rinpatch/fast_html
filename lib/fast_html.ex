@@ -19,13 +19,14 @@ defmodule :fast_html do
   Returns a tree representation from the given html string.
 
   `opts` is a keyword list of options, the options available:
-  * `timeout` - Call timeout
-  * `format` - Format flags for the tree
+  * `timeout` - Call timeout. If pooling is used and the worker doesn't return
+     the result in time, the worker will be killed with a warning.
+  * `format` - Format flags for the tree.
 
   The following format flags are available:
 
   * `:html_atoms` uses atoms for known html tags (faster), binaries for everything else.
-  * `:nil_self_closing` uses `nil` to designate self-closing tags and void elements.
+  * `:nil_self_closing` uses `nil` to designate void elements.
       For example `<br>` is then being represented like `{"br", [], nil}`.
       See http://w3c.github.io/html-reference/syntax.html#void-elements for a full list of void elements.
   * `:comment_tuple3` uses 3-tuple elements for comments, instead of the default 2-tuple element.
@@ -61,7 +62,7 @@ defmodule :fast_html do
       iex> :fast_html.decode(html, format: [:html_atoms, :nil_self_closing, :comment_tuple3])
       {:ok, [{:html, [],
        [{:head, [], []},
-        {:body, [], [{:comment, [], " a comment "}, {"unknown", [], nil}]}]}]}
+        {:body, [], [{:comment, [], " a comment "}, {"unknown", [], []}]}]}]}
 
   """
   @spec decode(String.t(), format: [format_flag()]) ::
@@ -69,7 +70,8 @@ defmodule :fast_html do
   def decode(bin, opts \\ []) do
     flags = Keyword.get(opts, :format, [])
     timeout = Keyword.get(opts, :timeout, 10000)
-    FastHtml.Cnode.call({:decode, bin, flags}, timeout)
+
+    find_and_use_port({:decode, bin, flags}, timeout, opts)
   end
 
   @doc """
@@ -77,22 +79,69 @@ defmodule :fast_html do
 
   `opts` is a keyword list of options, the options available are the same as in `decode/2` with addition of:
   * `context` - Name of the context element, defaults to `div`
-  * `format` - Format flags for the tree
 
   Example:
       iex> :fast_html.decode_fragment("rin is the <i>best</i> girl")
-      {:ok, [{"html", [], ["rin is the ", {"i", [], ["best"]}, " girl"]}]}
+      {:ok, ["rin is the ", {"i", [], ["best"]}, " girl"]}
       iex> :fast_html.decode_fragment("rin is the <i>best</i> girl", context: "title")
-      {:ok, [{"html", [], ["rin is the <i>best</i> girl"]}]}
+      {:ok, ["rin is the <i>best</i> girl"]}
       iex> :fast_html.decode_fragment("rin is the <i>best</i> girl", context: "objective_truth")
       {:error, :unknown_context_tag}
       iex> :fast_html.decode_fragment("rin is the <i>best</i> girl", format: [:html_atoms])
-      {:ok, [{:html, [], ["rin is the ", {:i, [], ["best"]}, " girl"]}]}
+      {:ok, ["rin is the ", {:i, [], ["best"]}, " girl"]}
   """
   def decode_fragment(bin, opts \\ []) do
     flags = Keyword.get(opts, :format, [])
     timeout = Keyword.get(opts, :timeout, 10000)
     context = Keyword.get(opts, :context, "div")
-    FastHtml.Cnode.call({:decode_fragment, bin, flags, context}, timeout)
+
+    find_and_use_port({:decode_fragment, bin, flags, context}, timeout, opts)
+  end
+
+  @default_pool FastHtml.Pool
+  defp find_and_use_port(term_command, timeout, opts) do
+    command = :erlang.term_to_binary(term_command)
+
+    pool =
+      cond do
+        pool = Keyword.get(opts, :pool) -> pool
+        Application.get_env(:fast_html, :pool, enabled: true)[:enabled] -> @default_pool
+        true -> nil
+      end
+
+    execute_command_fun = fn port ->
+      send(port, {self(), {:command, command}})
+
+      receive do
+        {^port, {:data, res}} -> {:ok, res}
+      after
+        timeout ->
+          {:error, :timeout}
+      end
+    end
+
+    result =
+      if pool do
+        FastHtml.Pool.get_port(pool, execute_command_fun)
+      else
+        port = open_port()
+        result = execute_command_fun.(port)
+        Port.close(port)
+        result
+      end
+
+    case result do
+      {:ok, result} -> :erlang.binary_to_term(result)
+      {:error, _} = e -> e
+    end
+  end
+
+  def open_port do
+    Port.open({:spawn_executable, Path.join([:code.priv_dir(:fast_html), "fasthtml_worker"])}, [
+      :binary,
+      {:packet, 4},
+      :use_stdio,
+      :exit_status
+    ])
   end
 end

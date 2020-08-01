@@ -20,9 +20,9 @@
 # include "erl_interface.h"
 #endif
 
-#include <myhtml/myhtml.h>
-#include <myhtml/mynamespace.h>
+#define HEADER_SIZE 4
 
+#include <lexbor/html/html.h>
 #include "tstack.h"
 
 #ifdef __GNUC__
@@ -38,10 +38,6 @@
 #endif
 
 typedef struct _state_t {
-  int fd;
-  myhtml_t * myhtml;
-  ei_cnode ec;
-  bool looping;
   ei_x_buff buffer;
 } state_t;
 
@@ -51,14 +47,14 @@ typedef enum parse_flags_e {
   FLAG_COMMENT_TUPLE3   = 1 << 2
 } parse_flags_t;
 
-static void handle_emsg(state_t * state, erlang_msg * emsg);
-static void handle_send(state_t * state, erlang_msg * emsg);
+char* read_packet(int *len);
+static void handle_send(state_t * state);
 static void err_term(ei_x_buff * response, const char * error_atom);
 static parse_flags_t decode_parse_flags(state_t * state, int arity);
-static void decode(state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, parse_flags_t parse_flags, bool fragment, myhtml_tag_id_t context_tag_id);
+static void decode(state_t * state, ei_x_buff * response, lxb_html_document_t *document, bool fragment, lxb_dom_element_t *context_element, lxb_char_t * bin_data, size_t bin_size, parse_flags_t parse_flags);
 
-static void build_tree(ei_x_buff * response, myhtml_tree_t * tree, parse_flags_t parse_flags);
-static void prepare_node_attrs(ei_x_buff * response, myhtml_tree_node_t * node);
+static void build_tree(ei_x_buff * response, lxb_dom_node_t* tree, parse_flags_t parse_flags);
+static void prepare_node_attrs(ei_x_buff * response, lxb_dom_node_t* node);
 
 static inline char * lowercase(char * c);
 
@@ -71,21 +67,13 @@ static void panic(const char *fmt, ...) {
   vsnprintf (buf, sizeof buf, fmt, va);
   va_end (va);
 
-  fprintf (stderr, "myhtml worker: error: %s\n", buf);
-  exit (EXIT_FAILURE);
-}
-
-static void usage (void) NORETURN;
-static void usage (void) {
-  fputs ("usage: myhtml_worker sname hostname cookie tname\n\n"
-         "   sname      the short name you want this c-node to connect as\n"
-         "   hostname   the hostname\n"
-         "   cookie     the authentication cookie\n"
-         "   tname      the target node short name to connect to\n", stderr);
+  fprintf (stderr, "fast_html worker: error: %s\n", buf);
   exit (EXIT_FAILURE);
 }
 
 int main(int argc, const char *argv[]) {
+   state_t* state = calloc (1, sizeof(state_t));
+
 #ifdef OTP_22_OR_NEWER
   // initialize erlang client library
   ei_init ();
@@ -93,87 +81,88 @@ int main(int argc, const char *argv[]) {
   erl_init (NULL, -1);
 #endif
 
-  if (argc != 5)
-    usage ();
-
-  const char *sname = argv[1];
-  const char *hostname = argv[2];
-  const char *cookie = argv[3];
-  const char *tname = argv[4];
-
-  char full_name[1024];
-  char target_node[1024];
-
-  snprintf (full_name, sizeof full_name, "%s@%s", sname, hostname);
-  snprintf (target_node, sizeof target_node, "%s@%s", tname, hostname);
-
-  struct in_addr addr;
-  addr.s_addr = htonl(INADDR_ANY);
-
-  // fd to erlang node
-  state_t* state = calloc (1, sizeof(state_t));
-  state->looping = true;
   ei_x_new (&state->buffer);
 
-  // initialize this node
-  printf ("initialising %s\n", full_name);
-  if (ei_connect_xinit (&state->ec, hostname, sname, full_name, &addr, cookie, 0) == -1)
-    panic ("ei_connect_xinit failed.");
-
-  // connect to target node
-  printf ("connecting to %s\n", target_node);
-  if ((state->fd = ei_connect (&state->ec, target_node)) < 0)
-    panic ("ei_connect failed.");
-
-  state->myhtml = myhtml_create ();
-  myhtml_init (state->myhtml, MyHTML_OPTIONS_DEFAULT, 1, 0);
-
-  // signal to stdout that we are ready
-  printf ("%s ready\n", full_name);
   fflush (stdout);
 
-  while (state->looping)
-  {
-    erlang_msg emsg;
-
-    switch (ei_xreceive_msg (state->fd, &emsg, &state->buffer))
-    {
-      case ERL_TICK:
-        break;
-      case ERL_ERROR:
-        panic ("ei_xreceive_msg: %s\n", strerror (erl_errno));
-        break;
-      default:
-        handle_emsg (state, &emsg);
-        break;
-    }
+  while (true) {
+    int len;
+    char* buf = read_packet(&len);
+    ei_x_free(&state->buffer);
+    state->buffer.index = 0;
+    state->buffer.buff = buf;
+    state->buffer.buffsz = len;
+    handle_send (state);
   }
 
   // shutdown: free all state
   ei_x_free (&state->buffer);
-  myhtml_destroy (state->myhtml);
   free (state);
 
   return EXIT_SUCCESS;
 }
 
-// handle an erlang_msg structure and call handle_send() if relevant
-static void handle_emsg (state_t * state, erlang_msg * emsg)
-{
-  state->buffer.index = 0;
 
-  switch (emsg->msgtype)
-  {
-    case ERL_REG_SEND:
-    case ERL_SEND:
-      handle_send (state, emsg);
-      break;
-    case ERL_LINK:
-    case ERL_UNLINK:
-      break;
-    case ERL_EXIT:
-      break;
-  }
+/*
+ * Reads a packet from Erlang.  The packet must be a standard {packet, 2}
+ * packet.  This function aborts if any error is detected (including EOF).
+ *
+ * Returns: The number of bytes in the packet.
+ */
+
+char *read_packet(int *len)
+{
+
+    char* io_buf = NULL; /* Buffer for file i/o. */
+    unsigned char header[HEADER_SIZE];
+    uint32_t packet_length;	/* Length of current packet. */
+    uint32_t bytes_read;
+    uint32_t total_bytes_read;
+    
+    /*
+     * Read the packet header.
+     */
+    
+    total_bytes_read = read(STDIN_FILENO, header, HEADER_SIZE);
+
+    if (total_bytes_read == 0) {
+       exit(0);
+    }
+    if (total_bytes_read != HEADER_SIZE) {
+	panic("Failed to read packet header, read: %d\n", total_bytes_read);
+    }
+
+    /*
+     * Get the length of this packet.
+     */
+	
+    packet_length = 0;
+
+    for (int i = 0; i < HEADER_SIZE; i++)
+	packet_length = (packet_length << 8) | header[i];
+
+    *len=packet_length;
+    
+    if ((io_buf = (char *) malloc(packet_length)) == NULL) {
+	panic("insufficient memory for i/o buffer of size %d\n", packet_length);
+    }
+
+    /*
+     * Read the packet itself.
+     */
+    
+    total_bytes_read = 0;
+
+    while((bytes_read = read(STDIN_FILENO, (io_buf + total_bytes_read), (packet_length - total_bytes_read))))
+      total_bytes_read += bytes_read;
+
+    if (total_bytes_read != packet_length) {
+	free(io_buf);
+	panic("couldn't read packet of length %d, read: %d\r\n",
+		packet_length, total_bytes_read);
+    }
+
+    return io_buf;
 }
 
 // handle ERL_SEND message type.
@@ -184,7 +173,7 @@ static void handle_emsg (state_t * state, erlang_msg * emsg)
 // In case of `decode_fragment`, the fourth argument should be
 // the context tag name.
 // any other message: respond with an {error, unknown_call} tuple.
-static void handle_send (state_t * state, erlang_msg * emsg)
+static void handle_send (state_t * state)
 {
   // response holds our response, prepare it
   ei_x_buff response;
@@ -256,8 +245,10 @@ static void handle_send (state_t * state, erlang_msg * emsg)
     if (ei_decode_list_header (state->buffer.buff, &state->buffer.index, &arity) < 0)
       panic ("failed to decode empty list header after option list in message");
 
+  lxb_html_document_t *document = lxb_html_document_create();
+  lxb_dom_element_t *context_element = NULL;
+
   // if we are parsing a fragment, context tag name should come next
-  myhtml_tag_id_t context_tag_id = 0;
   if (fragment) {
     int context_bin_type, context_bin_size;
     if (ei_get_type (state->buffer.buff, &state->buffer.index, &context_bin_type, &context_bin_size) < 0)
@@ -271,32 +262,36 @@ static void handle_send (state_t * state, erlang_msg * emsg)
     }
 
     // decode the binary
-    char * context_bin_data = calloc (1, context_bin_size + 1);
+    char* context_bin_data = calloc (1, context_bin_size + 1);
     if (ei_decode_binary (state->buffer.buff, &state->buffer.index, context_bin_data, NULL) < 0)
-      panic ("failed to decode binary in message");
+      panic ("failed to decode context binary in message");
 
-    const myhtml_tag_context_t * context_tag_context = myhtml_tag_static_search(context_bin_data, context_bin_size);
-
+    context_element = lxb_dom_document_create_element(&document->dom_document, (lxb_char_t*) context_bin_data, context_bin_size, NULL);
     free (context_bin_data);
-
-    if (context_tag_context == NULL) {
-      err_term (&response, "unknown_context_tag");
-      goto out;
-    } else {
-      context_tag_id = context_tag_context->id;
-    }
   }
-  decode (state, &response, bin_data, bin_size, parse_flags, fragment, context_tag_id);
-
+  
+  if (context_element && lxb_dom_element_tag_id(context_element) >= LXB_TAG__LAST_ENTRY) {
+    err_term (&response, "unknown_context_tag");
+  } else {
+    decode (state, &response, document, fragment, context_element, (lxb_char_t *) bin_data, bin_size, parse_flags);
+  }
+  lxb_html_document_destroy(document);
   free (bin_data);
 
-out:
+out: ;
   // send response
-  ei_send (state->fd, &emsg->from, response.buff, response.buffsz);
+  unsigned char header[HEADER_SIZE];
+  uint32_t size = (uint32_t) response.index;
 
+  for (int i = HEADER_SIZE-1; i != -1; i--) {
+    header[i] = (unsigned char) size & 0xFF;
+    size = size >> 8;
+  }
+
+  write(STDOUT_FILENO, header, sizeof(header));
+  write(STDOUT_FILENO, response.buff, response.index);
   // free response
   ei_x_free (&response);
-
   return;
 }
 
@@ -304,8 +299,6 @@ static void err_term (ei_x_buff * response, const char * error_atom)
 {
   response->index = 0;
   ei_x_encode_version (response);
-  ei_x_encode_tuple_header(response, 2);
-  ei_x_encode_atom(response, "myhtml_worker");
   ei_x_encode_tuple_header (response, 2);
   ei_x_encode_atom (response, "error");
   ei_x_encode_atom (response, error_atom);
@@ -333,29 +326,28 @@ static parse_flags_t decode_parse_flags (state_t * state, int arity)
   return parse_flags;
 }
 
-static void decode (state_t * state, ei_x_buff * response, const char * bin_data, size_t bin_size, parse_flags_t parse_flags, bool fragment, myhtml_tag_id_t context_tag_id)
+static void decode(state_t * state, ei_x_buff * response, lxb_html_document_t *document, bool fragment, lxb_dom_element_t *context_element, lxb_char_t * bin_data, size_t bin_size, parse_flags_t parse_flags)
 {
-  myhtml_tree_t * tree = myhtml_tree_create ();
-  myhtml_tree_init (tree, state->myhtml);
-  myhtml_tree_parse_flags_set (tree, MyHTML_TREE_PARSE_FLAGS_WITHOUT_DOCTYPE_IN_TREE);
-
   // parse tree
-  mystatus_t status;
+  lxb_status_t status;
+  lxb_dom_node_t *node;
+
   if (fragment) {
-    status = myhtml_parse_fragment(tree, MyENCODING_UTF_8, bin_data, bin_size, context_tag_id, 0);
+    node = lxb_html_document_parse_fragment(document, context_element, bin_data, bin_size);
+    status = (node == NULL)? LXB_STATUS_ERROR : LXB_STATUS_OK;
   } else {
-    status = myhtml_parse (tree, MyENCODING_UTF_8, bin_data, bin_size);
+    status = lxb_html_document_parse(document, bin_data, bin_size);
+    node = lxb_dom_interface_node(document);
   }
 
-  if (status != MyHTML_STATUS_OK)
+  if (status != LXB_STATUS_OK)
   {
-    err_term (response, "myhtml_parse_failed");
+    err_term (response, "parse_failed");
     return;
   }
 
   // build tree
-  build_tree (response, tree, parse_flags);
-  myhtml_tree_destroy (tree);
+  build_tree (response, node, parse_flags);
 }
 
 // a tag is sent as a tuple:
@@ -363,14 +355,13 @@ static void decode (state_t * state, ei_x_buff * response, const char * bin_data
 // - an attribute list
 // - a children list
 // in this function, we prepare the atom and complete attribute list
-static void prepare_tag_header (ei_x_buff * response, const char * tag_string, myhtml_tree_node_t * node, parse_flags_t parse_flags)
+static void prepare_tag_header (ei_x_buff * response, const char * tag_string, lxb_dom_node_t* node, parse_flags_t parse_flags)
 {
-  myhtml_tag_id_t tag_id = myhtml_node_tag_id (node);
-  myhtml_namespace_t tag_ns = myhtml_node_namespace (node);
+  lxb_tag_id_t tag_id = lxb_dom_node_tag_id(node);
 
   ei_x_encode_tuple_header (response, 3);
 
-  if (! (parse_flags & FLAG_HTML_ATOMS) || (tag_id == MyHTML_TAG__UNDEF || tag_id == MyHTML_TAG_LAST_ENTRY || tag_ns != MyHTML_NAMESPACE_HTML))
+  if (! (parse_flags & FLAG_HTML_ATOMS) || (tag_id == LXB_TAG__UNDEF || tag_id >= LXB_TAG__LAST_ENTRY))
     ei_x_encode_binary (response, tag_string, strlen (tag_string));
   else
     ei_x_encode_atom (response, tag_string);
@@ -379,16 +370,16 @@ static void prepare_tag_header (ei_x_buff * response, const char * tag_string, m
 }
 
 // prepare an attribute node
-static void prepare_node_attrs(ei_x_buff * response, myhtml_tree_node_t * node)
+static void prepare_node_attrs(ei_x_buff * response, lxb_dom_node_t* node)
 {
-  myhtml_tree_attr_t * attr;
+  lxb_dom_attr_t *attr;
 
-  for (attr = myhtml_node_attribute_first (node); attr != NULL; attr = myhtml_attribute_next (attr))
+  for (attr = lxb_dom_element_first_attribute(lxb_dom_interface_element(node)); attr != NULL; attr = lxb_dom_element_next_attribute(attr))
   {
     size_t attr_name_len;
-    const char *attr_name = myhtml_attribute_key (attr, &attr_name_len);
+    char *attr_name = (char*) lxb_dom_attr_qualified_name(attr, &attr_name_len);
     size_t attr_value_len;
-    const char *attr_value = myhtml_attribute_value (attr, &attr_value_len);
+    const char *attr_value = (char*) lxb_dom_attr_value(attr, &attr_value_len);
 
     /* guard against poisoned attribute nodes */
     if (! attr_name_len)
@@ -441,88 +432,60 @@ static void prepare_comment (ei_x_buff * response, const char * node_comment, si
 
 #endif
 
-static void build_tree (ei_x_buff * response, myhtml_tree_t * tree, parse_flags_t parse_flags)
+static void build_tree (ei_x_buff * response, lxb_dom_node_t* node, parse_flags_t parse_flags)
 {
-  myhtml_tree_node_t * node = myhtml_tree_get_document (tree);
-
   tstack stack;
   tstack_init (&stack, 30);
   tstack_push (&stack, node);
 
-  myhtml_tree_node_t * current_node = node->child;
+  lxb_dom_node_t* current_node = node->first_child;
 
   // ok we're going to send an actual response so start encoding it
   response->index = 0;
   ei_x_encode_version (response);
   ei_x_encode_tuple_header(response, 2);
-  ei_x_encode_atom(response, "myhtml_worker");
-  ei_x_encode_tuple_header(response, 2);
   ei_x_encode_atom(response, "ok");
 
+  if (current_node == NULL) {
+    EMIT_EMPTY_LIST_HDR;
+    EMIT_LIST_TAIL;
+  }
   while (current_node != NULL)
   {
-    myhtml_tag_id_t tag_id = myhtml_node_tag_id (current_node);
-    myhtml_namespace_t tag_ns = myhtml_node_namespace (current_node);
-
-    if (tag_id == MyHTML_TAG__TEXT)
+    if (current_node->type == LXB_DOM_NODE_TYPE_TEXT)
     {
       size_t text_len;
-      const char * node_text = myhtml_node_text (current_node, &text_len);
+      const char * node_text = (char*) lxb_dom_node_text_content(current_node, &text_len);
       EMIT_LIST_HDR;
       ei_x_encode_binary (response, node_text, text_len);
     }
-    else if (tag_id == MyHTML_TAG__COMMENT)
+    else if (current_node->type == LXB_DOM_NODE_TYPE_COMMENT)
     {
       size_t comment_len;
-      const char* node_comment = myhtml_node_text (current_node, &comment_len);
+      const char* node_comment = (char*) lxb_dom_node_text_content(current_node, &comment_len);
 
       EMIT_LIST_HDR;
-      prepare_comment (response, node_comment, comment_len, parse_flags);
+      prepare_comment(response, node_comment, comment_len, parse_flags);
     }
-    else
+    else if(current_node->type == LXB_DOM_NODE_TYPE_ELEMENT)
     {
       // get name of tag
       size_t tag_name_len;
-      const char *tag_name = myhtml_tag_name_by_id (tree, tag_id, &tag_name_len);
-      // get namespace of tag
-      size_t tag_ns_len;
-      const char *tag_ns_name_ptr = myhtml_namespace_name_by_id (tag_ns, &tag_ns_len);
-      char buffer [tag_ns_len + tag_name_len + 2];
-      char *tag_string = buffer;
-
-      if (tag_ns != MyHTML_NAMESPACE_HTML)
-      {
-        // tag_ns_name_ptr is unmodifyable, copy it in our tag_ns_buffer to make it modifyable.
-	// +1 because myhtml uses strlen for length returned, which doesn't include the null-byte
-	// https://github.com/lexborisov/myhtml/blob/0ade0e564a87f46fd21693a7d8c8d1fa09ffb6b6/source/myhtml/mynamespace.c#L80
-        char tag_ns_buffer[tag_ns_len + 1];
-        strncpy (tag_ns_buffer, tag_ns_name_ptr, sizeof tag_ns_buffer);
-        lowercase (tag_ns_buffer);
-
-	snprintf (tag_string, sizeof buffer, "%s:%s", tag_ns_buffer, tag_name);
-      }
-      else
-      {
-        // strncpy length does not contain null, so blank the buffer before copying
-        // and limit the copy length to buffer size minus one for safety.
-        memset (tag_string, '\0', sizeof buffer);
-        strncpy (tag_string, tag_name, sizeof buffer - 1);
-      }
-
+      const char *tag_name = (char*) lxb_dom_element_qualified_name(lxb_dom_interface_element(current_node), &tag_name_len);
       EMIT_LIST_HDR;
-      prepare_tag_header (response, tag_string, current_node, parse_flags);
+      prepare_tag_header (response, tag_name, current_node, parse_flags);
 
-      if (current_node->child)
+      if (current_node->first_child)
       {
         tstack_push (&stack, current_node);
-        current_node = current_node->child;
+        current_node = current_node->first_child;
 
         continue;
       }
       else
       {
-        if (parse_flags & FLAG_NIL_SELF_CLOSING && (myhtml_node_is_close_self(current_node) || myhtml_node_is_void_element(current_node)))
-        {
+        if (parse_flags & FLAG_NIL_SELF_CLOSING && lxb_html_tag_is_void(lxb_dom_node_tag_id(current_node))) {
+  
 #ifdef DEBUG_LIST_MANIP
           printf ("self-closing tag %s emit nil?\n", tag_string); fflush (stdout);
 #endif

@@ -1,4 +1,5 @@
 MIX = mix
+CMAKE = cmake
 CNODE_CFLAGS = -g -O2 -std=c99 -pedantic -Wcomment -Wextra -Wno-old-style-declaration -Wall
 
 # ignore unused parameter warnings
@@ -11,9 +12,9 @@ CNODE_CFLAGS += -I$(ERLANG_PATH)/include
 # expecting myhtml as a submodule in c_src/
 # that way we can pin a version and package the whole thing in hex
 # hex does not allow for non-app related dependencies.
-MYHTML_PATH = c_src/myhtml
-MYHTML_STATIC = $(MYHTML_PATH)/lib/libmyhtml_static.a
-CNODE_CFLAGS += -I$(MYHTML_PATH)/include
+LXB_PATH = c_src/lexbor
+LXB_STATIC = $(LXB_PATH)/liblexbor_static.a
+CNODE_CFLAGS += -I$(LXB_PATH)/source
 # avoid undefined reference errors to phtread_mutex_trylock
 CNODE_CFLAGS += -lpthread
 
@@ -34,17 +35,19 @@ CNODE_LDFLAGS += -lei -pthread
 
 .PHONY: all
 
-all: priv/myhtml_worker
+all: priv/fasthtml_worker
 
-$(MYHTML_STATIC): $(MYHTML_PATH)
-	$(MAKE) -C $(MYHTML_PATH) library MyCORE_BUILD_WITHOUT_THREADS=YES
+$(LXB_STATIC): $(LXB_PATH)
+	# Sadly, build components separately seems to sporadically fail
+	cd $(LXB_PATH); cmake -DLEXBOR_BUILD_SEPARATELY=OFF -DLEXBOR_BUILD_SHARED=OFF
+	$(MAKE) -C $(LXB_PATH)
 
-priv/myhtml_worker: c_src/myhtml_worker.c $(MYHTML_STATIC)
-	$(CC) -o $@ $< $(MYHTML_STATIC) $(CNODE_CFLAGS) $(CNODE_LDFLAGS)
+priv/fasthtml_worker: c_src/fasthtml_worker.c $(LXB_STATIC)
+	$(CC) -o $@ $< $(LXB_STATIC) $(CNODE_CFLAGS) $(CNODE_LDFLAGS)
 
 clean: clean-myhtml
 	$(RM) -r priv/myhtmlex*
-	$(RM) priv/myhtml_worker
+	$(RM) priv/fasthtml_worker
 	$(RM) myhtmlex-*.tar
 	$(RM) -r package-test
 

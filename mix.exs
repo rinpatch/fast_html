@@ -4,11 +4,12 @@ defmodule FastHtml.Mixfile do
   def project do
     [
       app: :fast_html,
-      version: "1.0.3",
+      version: "2.0.0",
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
-      compilers: [:fast_html_cnode_make] ++ Mix.compilers(),
+      compilers: [:elixir_make] ++ Mix.compilers(),
+      make_env: make_env(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       name: "FastHtml",
@@ -68,9 +69,13 @@ defmodule FastHtml.Mixfile do
       {:ex_doc, "~> 0.19", only: :dev},
       # benchmarking helpers
       {:benchee, "~> 1.0", only: :bench, optional: true},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:myhtmlex, "~> 0.2.0", only: :bench, runtime: false, optional: true},
       {:mochiweb, "~> 2.18", only: :bench, optional: true},
-      {:html5ever, "~> 0.7.0", only: :bench, optional: true}
+      {:html5ever,
+       git: "https://github.com/rusterlium/html5ever_elixir.git", only: :bench, optional: true},
+      {:nimble_pool, "~> 0.1"},
+      {:elixir_make, "~> 0.4", runtime: false}
     ]
   end
 
@@ -79,24 +84,6 @@ defmodule FastHtml.Mixfile do
       main: "readme",
       extras: ["README.md"]
     ]
-  end
-end
-
-defmodule Mix.Tasks.Compile.FastHtmlCnodeMake do
-  @artifacts [
-    "priv/myhtml_worker"
-  ]
-
-  def find_make do
-    _make_cmd =
-      System.get_env("MAKE") ||
-        case :os.type() do
-          {:unix, :freebsd} -> "gmake"
-          {:unix, :openbsd} -> "gmake"
-          {:unix, :netbsd} -> "gmake"
-          {:unix, :dragonfly} -> "gmake"
-          _ -> "make"
-        end
   end
 
   defp otp_version do
@@ -109,49 +96,14 @@ defmodule Mix.Tasks.Compile.FastHtmlCnodeMake do
     otp_version() >= 22
   end
 
-  def run(_) do
-    make_cmd = find_make()
-
-    exit_code =
-      if match?({:win32, _}, :os.type()) do
-        IO.warn("Windows is not yet a target.")
-        1
-      else
-        {result, exit_code} =
-          System.cmd(
-            make_cmd,
-            @artifacts,
-            stderr_to_stdout: true,
-            env: [
-              {"MIX_ENV", to_string(Mix.env())},
-              {"OTP22_DEF", (otp_22_or_newer?() && "YES") || "NO"}
-            ]
-          )
-
-        IO.binwrite(result)
-        exit_code
-      end
-
-    if exit_code == 0 do
-      :ok
-    else
-      {:error,
-       [
-         %Mix.Task.Compiler.Diagnostic{
-           compiler_name: "FastHtml Cnode",
-           message: "Make exited with #{exit_code}",
-           severity: :error,
-           file: nil,
-           position: nil
-         }
-       ]}
-    end
-  end
-
-  def clean() do
-    make_cmd = find_make()
-    {result, _error_code} = System.cmd(make_cmd, ["clean"], stderr_to_stdout: true)
-    Mix.shell().info(result)
-    :ok
+  defp make_env do
+    %{
+      "OTP22_DEF" =>
+        if otp_22_or_newer?() do
+          "YES"
+        else
+          "NO"
+        end
+    }
   end
 end
