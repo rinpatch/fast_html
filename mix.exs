@@ -16,10 +16,8 @@ defmodule FastHtml.Mixfile do
       description: """
         A module to decode HTML into a tree,
         porting all properties of the underlying
-        library myhtml, being fast and correct
+        library lexbor, being fast and correct
         in regards to the html spec.
-
-        Originally based on Myhtmlex.
       """,
       docs: docs()
     ]
@@ -32,7 +30,7 @@ defmodule FastHtml.Mixfile do
       links: %{
         "GitLab" => "https://git.pleroma.social/pleroma/elixir-libraries/fast_html/",
         "Issues" => "https://git.pleroma.social/pleroma/elixir-libraries/fast_html/issues",
-        "MyHTML" => "https://github.com/lexborisov/myhtml"
+        "lexbor" => "https://github.com/lexbor/lexbor"
       },
       files:
         [
