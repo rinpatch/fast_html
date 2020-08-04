@@ -32,23 +32,7 @@ defmodule FastHtml.Mixfile do
         "Issues" => "https://git.pleroma.social/pleroma/elixir-libraries/fast_html/issues",
         "lexbor" => "https://github.com/lexbor/lexbor"
       },
-      files:
-        [
-          "lib",
-          "priv/.gitignore",
-          "test",
-          "Makefile",
-          "mix.exs",
-          "README.md",
-          "LICENSE"
-        ] ++
-          Enum.reject(
-            Path.wildcard("c_src/**/*"),
-            fn path ->
-              Path.extname(path) in [".so", ".a", ".o"] or
-                String.starts_with?(Path.basename(path), ".") or File.dir?(path)
-            end
-          )
+      files: hex_files()
     ]
   end
 
@@ -78,8 +62,18 @@ defmodule FastHtml.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md"]
+      extras: ["README.md", "CHANGELOG.md"]
     ]
+  end
+
+  defp hex_files do
+    {files, 0} = System.cmd("git", ["ls-files", "--recurse-submodules"])
+
+    files
+    |> String.split("\n")
+    # Last element is "", which makes hex include all files in the folder to the project
+    |> List.delete_at(-1)
+    |> Enum.reject(fn path -> Path.dirname(path) == "bench_fixtures" or String.starts_with?(Path.basename(path), ".") end)
   end
 
   defp otp_version do
