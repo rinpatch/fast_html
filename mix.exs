@@ -54,7 +54,7 @@ defmodule FastHtml.Mixfile do
       {:mochiweb, "~> 2.18", only: :bench, optional: true},
       {:html5ever,
        git: "https://github.com/rusterlium/html5ever_elixir.git", only: :bench, optional: true},
-      {:nimble_pool, "~> 0.1"},
+      {:nimble_pool, "~> 0.1.0"},
       {:elixir_make, "~> 0.4", runtime: false}
     ]
   end
@@ -73,7 +73,10 @@ defmodule FastHtml.Mixfile do
     |> String.split("\n")
     # Last element is "", which makes hex include all files in the folder to the project
     |> List.delete_at(-1)
-    |> Enum.reject(fn path -> Path.dirname(path) == "bench_fixtures" or String.starts_with?(Path.basename(path), ".") end)
+    |> Enum.reject(fn path ->
+      Path.dirname(path) == "bench_fixtures" or
+        (Path.dirname(path) != "priv" and String.starts_with?(Path.basename(path), "."))
+    end)
   end
 
   defp otp_version do
