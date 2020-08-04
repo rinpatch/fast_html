@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0.1] - 2020-08-04
+### Fixed
+- Build failures using the hex package due to CMake cache files accidentally included there
+
+### Added
+- Changelog is now available at hexdocs
+
+
 ## [2.0.0] - 2020-08-01
 ### Changed
 - **Breaking:** CMake is now required at compile-time due to it being lexbor's build system
