@@ -67,16 +67,22 @@ defmodule FastHtml.Mixfile do
   end
 
   defp hex_files do
-    {files, 0} = System.cmd("git", ["ls-files", "--recurse-submodules"])
+    # This is run every time mix is executed, so it will fail in the hex package,
+    # therefore check if git is even available
+    if File.exists?(".git") do
+      {files, 0} = System.cmd("git", ["ls-files", "--recurse-submodules"])
 
-    files
-    |> String.split("\n")
-    # Last element is "", which makes hex include all files in the folder to the project
-    |> List.delete_at(-1)
-    |> Enum.reject(fn path ->
-      Path.dirname(path) == "bench_fixtures" or
-        (Path.dirname(path) != "priv" and String.starts_with?(Path.basename(path), "."))
-    end)
+      files
+      |> String.split("\n")
+      # Last element is "", which makes hex include all files in the folder to the project
+      |> List.delete_at(-1)
+      |> Enum.reject(fn path ->
+        Path.dirname(path) == "bench_fixtures" or
+          (Path.dirname(path) != "priv" and String.starts_with?(Path.basename(path), "."))
+      end)
+    else
+      []
+    end
   end
 
   defp otp_version do
