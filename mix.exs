@@ -55,9 +55,7 @@ defmodule FastHtml.Mixfile do
   def application do
     [
       extra_applications: [:logger],
-      mod: {FastHtml.Application, []},
-      # used to detect conflicts with other applications named processes
-      registered: [FastHtml.Cnode, FastHtml.Supervisor]
+      mod: {FastHtml.Application, []}
     ]
   end
 
