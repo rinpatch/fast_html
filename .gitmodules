@@ -1,3 +1,4 @@
 [submodule "c_src/lexbor"]
 	path = c_src/lexbor
-	url = https://github.com/lexbor/lexbor
+	url = https://github.com/lanodan/lexbor.git
+	branch = bugfix/gcc-10
