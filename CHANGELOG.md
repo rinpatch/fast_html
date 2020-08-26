@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0.2] - 2020-08-26
+### Fixed
+- lexbor compilation errors with gcc 10
+- Inability to use the library with distillery releases due to priv dir being in the source code
+
 ## [2.0.1] - 2020-08-04
 ### Fixed
 - Build failures using the hex package due to CMake cache files accidentally included there
