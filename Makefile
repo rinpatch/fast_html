@@ -43,6 +43,7 @@ $(LXB_STATIC): $(LXB_PATH)
 	$(MAKE) -C $(LXB_PATH)
 
 priv/fasthtml_worker: c_src/fasthtml_worker.c $(LXB_STATIC)
+	mkdir -p priv
 	$(CC) -o $@ $< $(LXB_STATIC) $(CNODE_CFLAGS) $(CNODE_LDFLAGS)
 
 clean: clean-myhtml
