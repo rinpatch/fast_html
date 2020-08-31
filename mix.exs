@@ -4,12 +4,13 @@ defmodule FastHtml.Mixfile do
   def project do
     [
       app: :fast_html,
-      version: "2.0.2",
+      version: "2.0.3",
       elixir: "~> 1.5",
       deps: deps(),
       package: package(),
       compilers: [:elixir_make] ++ Mix.compilers(),
       make_env: make_env(),
+      make_error_message: make_error_message(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       name: "FastHtml",
@@ -105,4 +106,8 @@ defmodule FastHtml.Mixfile do
         end
     }
   end
+
+  defp make_error_message,
+    do:
+      "Please check you have: a C compiler, GNU\Make, CMake and Erlang development headers installed before reporting an issue."
 end
